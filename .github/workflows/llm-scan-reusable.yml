@@ -1,0 +1,159 @@
+name: LLM Security Scan (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      scanner_repo:
+        description: 'Repository containing the scanner (format: owner/repo)'
+        required: false
+        type: string
+        default: ''
+      scanner_ref:
+        description: 'Branch, tag, or SHA to use for the scanner repo'
+        required: false
+        type: string
+        default: 'main'
+      paths:
+        description: 'Paths to scan (comma-separated, default: ".")'
+        required: false
+        type: string
+        default: '.'
+      severity:
+        description: 'Severity filter (comma-separated: critical,high,medium,low,info)'
+        required: false
+        type: string
+      exclude_patterns:
+        description: 'Exclude patterns (comma-separated, default: "tests/**,.github/**,**/__pycache__/**")'
+        required: false
+        type: string
+        default: 'tests/**,.github/**,**/__pycache__/**'
+      include_patterns:
+        description: 'Include patterns (comma-separated, e.g., "*.py")'
+        required: false
+        type: string
+      python_version:
+        description: 'Python version to use'
+        required: false
+        type: string
+        default: '3.11'
+      artifact_name:
+        description: 'Name for the SARIF artifact'
+        required: false
+        type: string
+        default: 'llm-scan-results'
+      artifact_retention_days:
+        description: 'Number of days to retain the artifact'
+        required: false
+        type: number
+        default: 30
+
+jobs:
+  scan:
+    name: LLM Security Scanner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Checkout llm-scan repository
+        if: ${{ inputs.scanner_repo != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.scanner_repo }}
+          ref: ${{ inputs.scanner_ref }}
+          path: llm-scan
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install semgrep
+          if [ -d "llm-scan" ]; then
+            pip install -e llm-scan
+            RULES_PATH="llm-scan/llm_scan/rules/python"
+          else
+            # Fallback: assume scanner is in current repo (for self-scanning)
+            pip install -e .
+            RULES_PATH="llm_scan/rules/python"
+          fi
+
+      - name: Run LLM Security Scan
+        id: scan
+        run: |
+          # Parse paths
+          PATHS="${{ inputs.paths }}"
+          PATHS_ARGS=$(echo "$PATHS" | tr ',' ' ')
+          
+          # Parse exclude patterns
+          EXCLUDE_ARGS=""
+          if [ -n "${{ inputs.exclude_patterns }}" ]; then
+            for pattern in $(echo "${{ inputs.exclude_patterns }}" | tr ',' ' '); do
+              EXCLUDE_ARGS="$EXCLUDE_ARGS --exclude '$pattern'"
+            done
+          fi
+          
+          # Parse include patterns
+          INCLUDE_ARGS=""
+          if [ -n "${{ inputs.include_patterns }}" ]; then
+            for pattern in $(echo "${{ inputs.include_patterns }}" | tr ',' ' '); do
+              INCLUDE_ARGS="$INCLUDE_ARGS --include '$pattern'"
+            done
+          fi
+          
+          # Parse severity
+          SEVERITY_ARGS=""
+          if [ -n "${{ inputs.severity }}" ]; then
+            for sev in $(echo "${{ inputs.severity }}" | tr ',' ' '); do
+              SEVERITY_ARGS="$SEVERITY_ARGS --severity '$sev'"
+            done
+          fi
+          
+          # Determine rules path
+          if [ -d "llm-scan" ]; then
+            RULES_PATH="llm-scan/llm_scan/rules/python"
+          else
+            RULES_PATH="llm_scan/rules/python"
+          fi
+          
+          python -m llm_scan.runner \
+            $PATHS_ARGS \
+            --rules "$RULES_PATH" \
+            --format sarif \
+            --out llm-scan-results.sarif \
+            $EXCLUDE_ARGS \
+            $INCLUDE_ARGS \
+            $SEVERITY_ARGS
+        continue-on-error: true
+
+      - name: Upload SARIF results as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: llm-scan-results.sarif
+          retention-days: ${{ inputs.artifact_retention_days }}
+
+      - name: Display scan summary
+        if: always()
+        run: |
+          if [ -f llm-scan-results.sarif ]; then
+            echo "## LLM Security Scan Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Scan completed successfully." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📦 SARIF results uploaded as artifact: \`${{ inputs.artifact_name }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Download the artifact from the Actions run to view detailed results." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## LLM Security Scan Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Scan failed or produced no results." >> $GITHUB_STEP_SUMMARY
+          fi
