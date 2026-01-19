@@ -1,0 +1,8 @@
+.vscode/**
+.vscode-test/**
+src/**
+tsconfig.json
+.gitignore
+.yarnrc
+vscode-extension.iml
+*.vsix

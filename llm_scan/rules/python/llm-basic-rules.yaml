@@ -1,0 +1,202 @@
+rules:
+  # Very simple: eval after openai call
+  - id: llm-eval-basic
+    pattern-either:
+      - pattern-inside: |
+          $RESPONSE = openai.ChatCompletion.create(...)
+          ...
+          eval($CODE)
+      - pattern-inside: |
+          $RESPONSE = openai.Completion.create(...)
+          ...
+          eval($CODE)
+      - pattern-inside: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          eval($CODE)
+    message: "LLM output passed to eval() - CODE INJECTION"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["code-injection", "eval", "llm", "ai-security", "basic", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output is passed to eval() function without validation, allowing arbitrary code execution."
+      remediation: "Never execute LLM output as code. Use safe parsing, validation, and structured output formats instead."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/vulnerabilities/Code_Injection"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  # exec after openai call
+  - id: llm-exec-basic
+    pattern-either:
+      - pattern-inside: |
+          $RESPONSE = openai.ChatCompletion.create(...)
+          ...
+          exec($CODE)
+      - pattern-inside: |
+          $RESPONSE = openai.Completion.create(...)
+          ...
+          exec($CODE)
+      - pattern-inside: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          exec($CODE)
+    message: "LLM output passed to exec() - CODE INJECTION"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["code-injection", "exec", "llm", "ai-security", "basic", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output is passed to exec() function without validation, allowing arbitrary code execution."
+      remediation: "Never execute LLM output as code. Use safe parsing, validation, and structured output formats instead."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/vulnerabilities/Code_Injection"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  # compile after openai call
+  - id: llm-compile-basic
+    pattern-either:
+      - pattern-inside: |
+          $RESPONSE = openai.ChatCompletion.create(...)
+          ...
+          compile($CODE, ...)
+      - pattern-inside: |
+          $RESPONSE = openai.Completion.create(...)
+          ...
+          compile($CODE, ...)
+      - pattern-inside: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          compile($CODE, ...)
+    message: "LLM output passed to compile() - CODE INJECTION"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["code-injection", "compile", "llm", "ai-security", "basic", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output is passed to compile() function without validation, allowing arbitrary code compilation and execution."
+      remediation: "Never compile LLM output as code. Use safe parsing, validation, and structured output formats instead."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/vulnerabilities/Code_Injection"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  # subprocess.run after openai call
+  - id: llm-subprocess-basic
+    pattern-either:
+      - pattern-inside: |
+          $RESPONSE = openai.ChatCompletion.create(...)
+          ...
+          subprocess.run($CMD, ...)
+      - pattern-inside: |
+          $RESPONSE = openai.Completion.create(...)
+          ...
+          subprocess.run($CMD, ...)
+      - pattern-inside: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          subprocess.run($CMD, ...)
+    message: "LLM output passed to subprocess.run() - COMMAND INJECTION"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["command-injection", "subprocess", "llm", "ai-security", "basic", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output is passed to subprocess.run() without validation, allowing command injection."
+      remediation: "Never execute LLM output as shell commands. Use subprocess with shell=False and validate all inputs."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/attacks/Command_Injection"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  # os.system after openai call
+  - id: llm-os-system-basic
+    pattern-either:
+      - pattern-inside: |
+          $RESPONSE = openai.ChatCompletion.create(...)
+          ...
+          os.system($CMD)
+      - pattern-inside: |
+          $RESPONSE = openai.Completion.create(...)
+          ...
+          os.system($CMD)
+      - pattern-inside: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          os.system($CMD)
+    message: "LLM output passed to os.system() - COMMAND INJECTION"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["command-injection", "os.system", "llm", "ai-security", "basic", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output is passed to os.system() without validation, allowing command injection through shell execution."
+      remediation: "Never execute LLM output as shell commands. Use subprocess with shell=False and validate all inputs. Avoid os.system() with untrusted input."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/attacks/Command_Injection"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  # Anthropic patterns
+  # Note: Removed llm-anthropic-eval rule - pattern-inside with ellipsis is not valid Semgrep syntax
+  # Use taint analysis rules in llm-code-injection.yaml instead
+
+  # Note: Removed llm-anthropic-subprocess rule - pattern-inside with ellipsis is not valid Semgrep syntax
+  # Use taint analysis rules in llm-command-injection.yaml instead

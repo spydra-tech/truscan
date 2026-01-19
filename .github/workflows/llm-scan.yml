@@ -1,0 +1,68 @@
+name: LLM Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly on Mondays
+    - cron: '0 0 * * 1'
+
+jobs:
+  scan:
+    name: LLM Security Scanner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install semgrep pytest
+          pip install -e .
+
+      - name: Run LLM Security Scan
+        id: scan
+        run: |
+          python -m llm_scan.runner \
+            --paths . \
+            --rules llm_scan/rules/python \
+            --format sarif \
+            --out llm-scan-results.sarif \
+            --exclude 'tests/**' \
+            --exclude '.github/**' \
+            --exclude '**/__pycache__/**'
+        continue-on-error: true
+
+      - name: Upload SARIF results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: llm-scan-results.sarif
+          category: llm-security-scan
+
+      - name: Display scan summary
+        if: always()
+        run: |
+          if [ -f llm-scan-results.sarif ]; then
+            echo "## LLM Security Scan Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Scan completed. Results uploaded to GitHub Code Scanning." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "View results in the Security tab of this repository." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## LLM Security Scan Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Scan failed or produced no results." >> $GITHUB_STEP_SUMMARY
+          fi

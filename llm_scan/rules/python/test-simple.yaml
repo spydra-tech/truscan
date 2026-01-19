@@ -1,0 +1,24 @@
+rules:
+  # Very simple test rule - should match any eval call
+  - id: test-eval
+    pattern: eval(...)
+    message: "Found eval() call"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+    paths:
+      include:
+        - "*.py"
+
+  # Test rule for openai call
+  - id: test-openai
+    pattern: openai.ChatCompletion.create(...)
+    message: "Found OpenAI ChatCompletion call"
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: inventory
+    paths:
+      include:
+        - "*.py"

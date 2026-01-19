@@ -1,0 +1,308 @@
+rules:
+  # Simple rule: eval/exec/compile after any LLM call
+  - id: llm-eval-simple
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = openai.ChatCompletion.create(...)
+              ...
+              eval($VAR)
+          - pattern: |
+              $RESPONSE = openai.Completion.create(...)
+              ...
+              eval($VAR)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+              ...
+              eval($VAR)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+              ...
+              eval($VAR)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (code|content|text|output|result|response|command|cmd|str|message|data)
+    message: "LLM output may flow to eval() - CODE INJECTION RISK"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["code-injection", "eval", "llm", "ai-security", "simple", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output may flow to eval() function, indicating a potential code injection vulnerability if the output is executed."
+      remediation: "NEVER execute LLM output as code. Validate and sanitize all LLM outputs. Use structured output formats instead."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/vulnerabilities/Code_Injection"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llm-exec-simple
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = openai.ChatCompletion.create(...)
+              ...
+              exec($VAR)
+          - pattern: |
+              $RESPONSE = openai.Completion.create(...)
+              ...
+              exec($VAR)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+              ...
+              exec($VAR)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+              ...
+              exec($VAR)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (code|content|text|output|result|response|command|cmd|str|message|data)
+    message: "LLM output may flow to exec() - CODE INJECTION RISK"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["code-injection", "exec", "llm", "ai-security", "simple", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output may flow to exec() function, indicating a potential code injection vulnerability if the output is executed."
+      remediation: "NEVER execute LLM output as code. Validate and sanitize all LLM outputs. Use structured output formats instead."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/vulnerabilities/Code_Injection"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llm-compile-simple
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = openai.ChatCompletion.create(...)
+              ...
+              compile($VAR, ...)
+          - pattern: |
+              $RESPONSE = openai.Completion.create(...)
+              ...
+              compile($VAR, ...)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+              ...
+              compile($VAR, ...)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+              ...
+              compile($VAR, ...)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (code|content|text|output|result|response|command|cmd|str|message|data)
+    message: "LLM output may flow to compile() - CODE INJECTION RISK"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      cwe: "CWE-94"
+      remediation: "NEVER compile LLM output as code. Validate and sanitize all LLM outputs."
+    paths:
+      include:
+        - "*.py"
+
+  - id: llm-subprocess-simple
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = openai.ChatCompletion.create(...)
+              ...
+              subprocess.run($VAR, ...)
+          - pattern: |
+              $RESPONSE = openai.Completion.create(...)
+              ...
+              subprocess.run($VAR, ...)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+              ...
+              subprocess.run($VAR, ...)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+              ...
+              subprocess.run($VAR, ...)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (code|content|text|output|result|response|command|cmd|str|message|data)
+    message: "LLM output may flow to subprocess.run() - COMMAND INJECTION RISK"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["command-injection", "subprocess", "llm", "ai-security", "simple", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output may flow to subprocess functions, indicating a potential command injection vulnerability."
+      remediation: "NEVER execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/attacks/Command_Injection"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llm-os-system-simple
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = openai.ChatCompletion.create(...)
+              ...
+              os.system($VAR)
+          - pattern: |
+              $RESPONSE = openai.Completion.create(...)
+              ...
+              os.system($VAR)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+              ...
+              os.system($VAR)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+              ...
+              os.system($VAR)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (code|content|text|output|result|response|command|cmd|str|message|data)
+    message: "LLM output may flow to os.system() - COMMAND INJECTION RISK"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["command-injection", "subprocess", "llm", "ai-security", "simple", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output may flow to subprocess functions, indicating a potential command injection vulnerability."
+      remediation: "NEVER execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/attacks/Command_Injection"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llm-subprocess-popen-simple
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = openai.ChatCompletion.create(...)
+              ...
+              subprocess.Popen($VAR, ...)
+          - pattern: |
+              $RESPONSE = openai.Completion.create(...)
+              ...
+              subprocess.Popen($VAR, ...)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+              ...
+              subprocess.Popen($VAR, ...)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+              ...
+              subprocess.Popen($VAR, ...)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (code|content|text|output|result|response|command|cmd|str|message|data)
+    message: "LLM output may flow to subprocess.Popen() - COMMAND INJECTION RISK"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["command-injection", "subprocess", "popen", "llm", "ai-security", "simple", "injection"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LLM output may flow to subprocess.Popen(), indicating a potential command injection vulnerability."
+      remediation: "NEVER execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/attacks/Command_Injection"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llm-anthropic-to-sink
+    patterns:
+      - pattern: |
+          $RESPONSE = $CLIENT.messages.create(...)
+          ...
+          $SINK($VAR)
+      - pattern-either:
+          - pattern: $SINK(...) = eval(...)
+          - pattern: $SINK(...) = exec(...)
+          - pattern: $SINK(...) = compile(...)
+          - pattern: $SINK(...) = subprocess.run(...)
+          - pattern: $SINK(...) = subprocess.call(...)
+          - pattern: $SINK(...) = subprocess.Popen(...)
+          - pattern: $SINK(...) = os.system(...)
+      - pattern-either:
+          - pattern: $VAR = $RESPONSE.content[0].text
+          - pattern: $VAR = $RESPONSE.content[0]
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (code|content|text|output|result|response|command|cmd|str|message|data)
+    message: "Anthropic LLM output flows to dangerous sink - SECURITY RISK"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: taint-analysis
+      cwe: ["CWE-94", "CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html", "https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["taint-analysis", "anthropic", "llm", "ai-security", "simple", "injection"]
+      technology: ["python", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Anthropic LLM output flows to dangerous sink functions (eval, exec, compile, subprocess, os.system), indicating a taint flow vulnerability."
+      remediation: "NEVER execute LLM output. Validate and sanitize all outputs. Use structured output parsing instead of code/command execution."
+      examples:
+        vulnerable: "samples/vulnerable_app.py"
+      references:
+        - "https://owasp.org/www-community/vulnerabilities/Code_Injection"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"

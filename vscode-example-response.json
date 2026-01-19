@@ -1,0 +1,61 @@
+{
+  "success": true,
+  "result": {
+    "findings": [
+      {
+        "rule_id": "llm-to-eval-complete",
+        "message": "LLM output flows directly to eval/exec/compile - CRITICAL CODE INJECTION RISK",
+        "severity": "critical",
+        "category": "code-injection",
+        "location": {
+          "file_path": "src/app.py",
+          "start_line": 42,
+          "start_column": 5,
+          "end_line": 42,
+          "end_column": 20,
+          "snippet": "eval(llm_output)"
+        },
+        "cwe": "CWE-94",
+        "remediation": "NEVER execute LLM output as code. Use safe parsing, validation, and whitelisting.",
+        "dataflow_path": [],
+        "metadata": {
+          "semgrep_rule_id": "llm-to-eval-complete",
+          "semgrep_severity": "ERROR"
+        }
+      },
+      {
+        "rule_id": "llm-to-subprocess-complete",
+        "message": "LLM output flows directly to subprocess/os.system - CRITICAL COMMAND INJECTION RISK",
+        "severity": "critical",
+        "category": "command-injection",
+        "location": {
+          "file_path": "src/utils.py",
+          "start_line": 15,
+          "start_column": 1,
+          "end_line": 15,
+          "end_column": 25,
+          "snippet": "subprocess.run(cmd, shell=True)"
+        },
+        "cwe": "CWE-78",
+        "remediation": "NEVER execute LLM output as shell commands. Use subprocess with shell=False and validate all inputs.",
+        "dataflow_path": [],
+        "metadata": {
+          "semgrep_rule_id": "llm-to-subprocess-complete",
+          "semgrep_severity": "ERROR"
+        }
+      }
+    ],
+    "scanned_files": [
+      "src/app.py",
+      "src/utils.py",
+      "src/helpers.py"
+    ],
+    "rules_loaded": [
+      "llm_scan/rules/python/llm-code-injection.yaml",
+      "llm_scan/rules/python/llm-command-injection.yaml",
+      "llm_scan/rules/python/llm-complete-rules.yaml"
+    ],
+    "scan_duration_seconds": 2.34,
+    "metadata": {}
+  }
+}
