@@ -123,6 +123,8 @@ jobs:
             RULES_PATH="llm_scan/rules/python"
           fi
           
+          # Run scan (exit code 1 means findings were found, which is expected)
+          set +e  # Don't exit on error
           python -m llm_scan.runner \
             $PATHS_ARGS \
             --rules "$RULES_PATH" \
@@ -131,6 +133,21 @@ jobs:
             $EXCLUDE_ARGS \
             $INCLUDE_ARGS \
             $SEVERITY_ARGS
+          SCAN_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          
+          # Exit code 1 means findings were found (expected), 0 means no findings
+          if [ $SCAN_EXIT_CODE -eq 1 ]; then
+            echo "⚠️ Security findings detected (exit code 1 is expected when vulnerabilities are found)"
+            echo "scan_findings=true" >> $GITHUB_OUTPUT
+          elif [ $SCAN_EXIT_CODE -eq 0 ]; then
+            echo "✅ No security findings detected"
+            echo "scan_findings=false" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Scan failed with exit code $SCAN_EXIT_CODE"
+            echo "scan_findings=error" >> $GITHUB_OUTPUT
+            exit $SCAN_EXIT_CODE
+          fi
         continue-on-error: true
 
       - name: Upload SARIF results as artifact
@@ -140,20 +157,43 @@ jobs:
           name: ${{ inputs.artifact_name }}
           path: llm-scan-results.sarif
           retention-days: ${{ inputs.artifact_retention_days }}
+          if-no-files-found: warn
 
       - name: Display scan summary
         if: always()
         run: |
-          if [ -f llm-scan-results.sarif ]; then
-            echo "## LLM Security Scan Results" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ Scan completed successfully." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "📦 SARIF results uploaded as artifact: \`${{ inputs.artifact_name }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Download the artifact from the Actions run to view detailed results." >> $GITHUB_STEP_SUMMARY
+          echo "## LLM Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f llm-scan-results.sarif ] && [ -s llm-scan-results.sarif ]; then
+            # Try to extract findings count from SARIF (basic parsing)
+            FINDINGS_COUNT=$(grep -o '"id"' llm-scan-results.sarif | wc -l || echo "unknown")
+            
+            if [ "${{ steps.scan.outputs.scan_findings }}" == "true" ]; then
+              echo "⚠️ **Security findings detected**" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "The scan found potential security vulnerabilities in your code." >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "📦 SARIF results uploaded as artifact: \`${{ inputs.artifact_name }}\`" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+              echo "1. Download the artifact from the Actions run" >> $GITHUB_STEP_SUMMARY
+              echo "2. Review the findings in the SARIF file" >> $GITHUB_STEP_SUMMARY
+              echo "3. Fix the identified vulnerabilities" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ steps.scan.outputs.scan_findings }}" == "false" ]; then
+              echo "✅ **No security findings detected**" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "📦 SARIF results uploaded as artifact: \`${{ inputs.artifact_name }}\`" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ **Scan failed**" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "The scan encountered an error. Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+            fi
           else
-            echo "## LLM Security Scan Results" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **No SARIF file generated**" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "⚠️ Scan failed or produced no results." >> $GITHUB_STEP_SUMMARY
+            echo "The scan did not produce a SARIF file. This may indicate:" >> $GITHUB_STEP_SUMMARY
+            echo "- The scan encountered an error" >> $GITHUB_STEP_SUMMARY
+            echo "- No files were scanned" >> $GITHUB_STEP_SUMMARY
+            echo "- Check the logs above for details" >> $GITHUB_STEP_SUMMARY
           fi
