@@ -2,6 +2,9 @@ name: LLM Security Scan (Reusable)
 
 on:
   workflow_call:
+    secrets:
+      GH_TOKEN:
+        required: true      
     inputs:
       scanner_repo:
         description: 'Repository containing the scanner (format: owner/repo)'
