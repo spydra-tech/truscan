@@ -1,0 +1,73 @@
+rules:
+  - id: debug-overreliance
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              $RESPONSE = openai.ChatCompletion.create(...)
+              ...
+          - pattern-inside: |
+              $RESPONSE = openai.Completion.create(...)
+              ...
+          - pattern-inside: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+              ...
+      - pattern-inside: |
+          $DECISION = $RESPONSE.choices[0].message.content
+          ...
+      - pattern-either:
+          # Just try to match the usage pattern first
+          - pattern: |
+              if $DECISION == "approve":
+                approve_transaction(...)
+                ...
+      # Exclude ALL validation/approval patterns to ensure high confidence
+      - pattern-not-inside: |
+          if $DECISION in ["approve", "reject", "pending"]:
+            ...
+      - pattern-not-inside: |
+          if $DECISION in $ALLOWED_DECISIONS:
+            ...
+      - pattern-not-inside: |
+          if human_approval_required():
+            ...
+      - pattern-not-inside: |
+          if requires_verification($DECISION):
+            ...
+      - pattern-not-inside: |
+          if verify_decision($DECISION):
+            ...
+      - pattern-not-inside: |
+          if validate($DECISION):
+            ...
+      - pattern-not-inside: |
+          if check_approval($DECISION):
+            ...
+      - pattern-not-inside: |
+          logger.info(f"Decision: {$DECISION}")
+            ...
+      - pattern-not-inside: |
+          print(f"Decision: {$DECISION}")
+            ...
+      - pattern-not-inside: |
+          logging.info(f"Decision: {$DECISION}")
+            ...
+      - pattern-not-inside: |
+          if $DECISION and $DECISION.strip():
+            ...
+      - pattern-not-inside: |
+          try:
+            ...
+            if $DECISION == "approve":
+              ...
+          except:
+            ...
+      - pattern-not-inside: |
+          if $VALIDATOR($DECISION):
+            ...
+      - pattern-not-inside: |
+          assert $DECISION == ...
+      - pattern-not-inside: |
+          assert $DECISION in ...
+    message: "Debug match"
+    severity: ERROR
+    languages: [python]

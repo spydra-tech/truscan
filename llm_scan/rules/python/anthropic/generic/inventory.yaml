@@ -1,0 +1,37 @@
+rules:
+  - id: llm-anthropic-client
+    patterns:
+    - pattern: $CLIENT = Anthropic(...)
+    - pattern-inside: '...
+
+        $RESPONSE = $CLIENT.messages.create(...)
+
+        '
+    message: Anthropic client usage detected
+    severity: INFO
+    languages:
+    - python
+    metadata:
+      category: inventory
+      subcategory: llm-api-detection
+      tags:
+      - inventory
+      - anthropic
+      - llm
+      - api-detection
+      technology:
+      - python
+      - anthropic
+      - llm
+      confidence: high
+      impact: info
+      likelihood: n/a
+      description: Anthropic client usage detected. This is an inventory rule to track LLM API usage in the codebase.
+      remediation: No remediation needed - this is an informational finding.
+      examples:
+        vulnerable: samples/vulnerable_app.py
+      references:
+      - https://docs.anthropic.com/claude/reference/messages_post
+    paths:
+      include:
+      - '*.py'

@@ -1,0 +1,89 @@
+rules:
+  # ============================================================================
+  # Jailbreak Risks - Weak System Prompts and Guardrail Bypasses
+  # ============================================================================
+  # Detects patterns that could allow jailbreak attacks through:
+  # - User input in system prompts (allows prompt injection)
+  # - Missing system prompts (no guardrails defined)
+  # ============================================================================
+
+  - id: jailbreak-system-prompt-injection
+    patterns:
+      - pattern-either:
+          - pattern: |
+              openai.ChatCompletion.create(messages=[..., {"role": "system", "content": f"...{$USER_INPUT}..."}, ...])
+          - pattern: |
+              openai.ChatCompletion.create(messages=[..., {"role": "system", "content": "..." + $USER_INPUT + "..."}, ...])
+          - pattern: |
+              $CLIENT.chat.completions.create(messages=[..., {"role": "system", "content": f"...{$USER_INPUT}..."}, ...])
+          - pattern: |
+              $CLIENT.chat.completions.create(messages=[..., {"role": "system", "content": "..." + $USER_INPUT + "..."}, ...])
+          - pattern: |
+              $CLIENT.messages.create(messages=[..., {"role": "system", "content": f"...{$USER_INPUT}..."}, ...])
+          - pattern: |
+              $CLIENT.messages.create(messages=[..., {"role": "system", "content": "..." + $USER_INPUT + "..."}, ...])
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt)
+    message: "Jailbreak Risk: User input in system prompt allows prompt injection and guardrail bypass"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: jailbreak
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["jailbreak", "prompt-injection", "system-prompt", "guardrail-bypass", "llm", "ai-security"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "User input is concatenated into system prompts using f-strings or string concatenation, allowing attackers to inject malicious instructions that bypass system guardrails and safety measures."
+      remediation: "Never include user input in system prompts. Use static system prompts that define the AI's behavior and safety constraints. If dynamic content is needed, use separate user messages instead of modifying the system prompt."
+      examples:
+        vulnerable: "samples/llm01_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://learnprompting.org/docs/category/-prompt-injection"
+    paths:
+      include:
+        - "*.py"
+
+  - id: jailbreak-missing-system-prompt
+    patterns:
+      - pattern-either:
+          - pattern: |
+              openai.ChatCompletion.create(messages=[{"role": "user", ...}, ...])
+          - pattern: |
+              $CLIENT.chat.completions.create(messages=[{"role": "user", ...}, ...])
+          - pattern: |
+              $CLIENT.messages.create(messages=[{"role": "user", ...}, ...])
+      - pattern-not: |
+          openai.ChatCompletion.create(messages=[..., {"role": "system", ...}, ...])
+      - pattern-not: |
+          $CLIENT.chat.completions.create(messages=[..., {"role": "system", ...}, ...])
+      - pattern-not: |
+          $CLIENT.messages.create(messages=[..., {"role": "system", ...}, ...])
+    message: "Jailbreak Risk: Missing system prompt - no guardrails or safety instructions defined"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: jailbreak
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["jailbreak", "missing-system-prompt", "guardrail", "llm", "ai-security"]
+      technology: ["python", "openai", "anthropic", "llm"]
+      confidence: "medium"
+      impact: "high"
+      likelihood: "medium"
+      description: "LLM API call does not include a system prompt, meaning no guardrails or safety instructions are defined. This makes the application more vulnerable to jailbreak attacks and prompt injection."
+      remediation: "Always include a system prompt that defines the AI's role, behavior constraints, and safety guidelines. System prompts help prevent jailbreak attacks by establishing clear boundaries."
+      examples:
+        vulnerable: "samples/llm01_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://learnprompting.org/docs/category/-prompt-injection"
+    paths:
+      include:
+        - "*.py"

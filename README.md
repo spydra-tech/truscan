@@ -111,10 +111,13 @@ The scanner detects vulnerabilities based on the **OWASP Top 10 for LLM Applicat
 
 ### Supported LLM APIs
 
-- OpenAI legacy API (`openai.ChatCompletion.create`, `openai.Completion.create`)
-- OpenAI v1 client (`OpenAI().chat.completions.create`)
-- Anthropic API (`Anthropic().messages.create`)
-- Generic LLM wrappers (`call_llm()`, `.llm()`, `.generate()`, `.chat()`)
+- **OpenAI**:
+  - Legacy API (`openai.ChatCompletion.create`, `openai.Completion.create`)
+  - v1 client (`OpenAI().chat.completions.create`)
+- **Anthropic**: `Anthropic().messages.create`
+- **Generic LLM wrappers**: `call_llm()`, `.llm()`, `.generate()`, `.chat()`
+
+Rules are organized by provider in `python/{provider}/generic/` directories.
 
 ## Project Structure
 
@@ -134,18 +137,39 @@ llm_scan/
 │   └── uploader.py        # Optional upload interface
 └── rules/
     └── python/            # Semgrep rule packs
-        ├── llm-owasp-top10.yaml      # OWASP Top 10 for LLM Applications
-        ├── llm-code-injection.yaml
-        ├── llm-command-injection.yaml
-        ├── llm-taint-sources.yaml
-        └── llm-complete-rules.yaml
+        ├── openai/        # OpenAI-specific rules
+        │   ├── generic/   # Framework-agnostic OpenAI rules
+        │   │   ├── prompt-injection.yaml
+        │   │   ├── code-injection.yaml
+        │   │   ├── command-injection.yaml
+        │   │   ├── sql-injection.yaml
+        │   │   ├── sensitive-info-disclosure.yaml
+        │   │   ├── model-dos.yaml
+        │   │   ├── overreliance.yaml
+        │   │   ├── supply-chain.yaml
+        │   │   ├── jailbreak.yaml
+        │   │   ├── data-exfiltration.yaml
+        │   │   ├── inventory.yaml
+        │   │   └── taint-sources.yaml
+        │   ├── flask/     # Flask-specific patterns (future)
+        │   └── django/    # Django-specific patterns (future)
+        ├── anthropic/     # Anthropic-specific rules
+        │   └── generic/
+        │       ├── prompt-injection.yaml
+        │       ├── code-injection.yaml
+        │       ├── inventory.yaml
+        │       └── taint-sources.yaml
+        └── [other providers]/  # Additional LLM providers
 ```
 
 ## Adding New Rules
 
 ### How to Add a New Rule Pack
 
-1. Create a new YAML file in `llm_scan/rules/python/` (or appropriate language directory):
+1. Create a new YAML file in the appropriate location following the structure:
+   - `llm_scan/rules/python/{llm_framework}/generic/` for framework-agnostic rules
+   - `llm_scan/rules/python/{llm_framework}/{web_framework}/` for web framework-specific rules
+   - Example: `llm_scan/rules/python/openai/generic/my-new-rule.yaml`
 
 ```yaml
 rules:
@@ -171,7 +195,9 @@ rules:
 
 Sinks are dangerous functions that should not receive untrusted LLM output. To add a new sink family:
 
-1. Add patterns to existing rule files or create a new rule file:
+1. Add patterns to existing rule files in the appropriate framework directory:
+   - For OpenAI: `llm_scan/rules/python/openai/generic/{vulnerability-type}.yaml`
+   - For Anthropic: `llm_scan/rules/python/anthropic/generic/{vulnerability-type}.yaml`
 
 ```yaml
 rules:
@@ -192,8 +218,8 @@ rules:
 
 ```python
 CATEGORY_MAP = {
-    "llm-code-injection": Category.CODE_INJECTION,
-    "llm-command-injection": Category.COMMAND_INJECTION,
+    "code-injection": Category.CODE_INJECTION,
+    "command-injection": Category.COMMAND_INJECTION,
     "llm-to-new-sink": Category.OTHER,  # Add your category
 }
 ```
@@ -202,7 +228,12 @@ CATEGORY_MAP = {
 
 LLM providers are sources of taint. To add support for a new LLM provider:
 
-1. Add patterns to `llm_scan/rules/python/llm-taint-sources.yaml`:
+1. Create the provider directory structure:
+   ```bash
+   mkdir -p llm_scan/rules/python/{new_provider}/generic
+   ```
+
+2. Add taint source patterns to `llm_scan/rules/python/{new_provider}/generic/taint-sources.yaml`:
 
 ```yaml
 rules:
@@ -219,7 +250,7 @@ rules:
     languages: [python]
 ```
 
-2. Add complete taint flow rules in `llm-complete-rules.yaml`:
+3. Add complete taint flow rules in `llm_scan/rules/python/{new_provider}/generic/code-injection.yaml` or similar:
 
 ```yaml
 rules:

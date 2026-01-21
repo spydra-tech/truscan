@@ -1,0 +1,103 @@
+rules:
+  # ============================================================================
+  # LLM09: Overreliance (OpenAI Generic)
+  # ============================================================================
+  # Detects blind trust in LLM output without validation or verification
+  # OWASP: LLM09
+  # CWE: CWE-345, CWE-754
+  # ============================================================================
+  # Note: Only high-confidence rules are included to minimize false positives
+
+  - id: openai-overreliance-code-execution
+    patterns:
+      # Match OpenAI API call and direct usage in eval/exec/compile
+      - pattern-inside: |
+          $RESPONSE = openai.ChatCompletion.create(...)
+          ...
+          $VAR = $RESPONSE.choices[0].message.content
+          ...
+          eval($VAR)
+          ...
+      - pattern-inside: |
+          $RESPONSE = openai.Completion.create(...)
+          ...
+          $VAR = $RESPONSE.choices[0].text
+          ...
+          eval($VAR)
+          ...
+      - pattern-inside: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          $VAR = $RESPONSE.choices[0].message.content
+          ...
+          eval($VAR)
+          ...
+      - pattern-inside: |
+          $RESPONSE = openai.ChatCompletion.create(...)
+          ...
+          $VAR = $RESPONSE.choices[0].message.content
+          ...
+          exec($VAR)
+          ...
+      - pattern-inside: |
+          $RESPONSE = openai.Completion.create(...)
+          ...
+          $VAR = $RESPONSE.choices[0].text
+          ...
+          exec($VAR)
+          ...
+      - pattern-inside: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          $VAR = $RESPONSE.choices[0].message.content
+          ...
+          exec($VAR)
+          ...
+      - pattern-inside: |
+          $RESPONSE = openai.ChatCompletion.create(...)
+          ...
+          $VAR = $RESPONSE.choices[0].message.content
+          ...
+          compile($VAR, ...)
+          ...
+      - pattern-inside: |
+          $RESPONSE = openai.Completion.create(...)
+          ...
+          $VAR = $RESPONSE.choices[0].text
+          ...
+          compile($VAR, ...)
+          ...
+      - pattern-inside: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          $VAR = $RESPONSE.choices[0].message.content
+          ...
+          compile($VAR, ...)
+          ...
+    message: "LLM09: Overreliance - OpenAI output used directly in eval/exec/compile (code execution risk)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: validation
+      owasp: "LLM09"
+      owasp-title: "Overreliance"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM09.html"
+      cwe: ["CWE-94", "CWE-754"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html", "https://cwe.mitre.org/data/definitions/754.html"]
+      tags: ["owasp", "llm09", "overreliance", "code-execution", "eval", "exec", "compile", "llm", "ai-security", "openai"]
+      technology: ["python", "openai", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "OpenAI output is extracted and used directly in eval(), exec(), or compile() functions, allowing arbitrary code execution. These functions are always dangerous when used with untrusted input, regardless of any validation."
+      remediation: "Never execute LLM output as code. Use safe parsing, validation, and structured output formats (JSON, YAML) instead of code execution."
+      examples:
+        vulnerable: "samples/llm09_overreliance.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://owasp.org/www-community/vulnerabilities/Improper_Error_Handling"
+    paths:
+      include:
+        - "*.py"
+

@@ -365,11 +365,36 @@ def main() -> int:
     if args.severity:
         severity_filter = [Severity(s) for s in args.severity]
 
+    # Set default include patterns if none provided
+    include_patterns = args.include if args.include else ["*.py"]
+    
+    # Set default exclude patterns for common directories
+    default_excludes = [
+        "**/__pycache__/**",
+        "**/node_modules/**",
+        "**/.venv/**",
+        "**/venv/**",
+        "**/env/**",
+        "**/.env/**",
+        "**/build/**",
+        "**/dist/**",
+        "**/.git/**",
+        "**/.pytest_cache/**",
+        "**/.mypy_cache/**",
+        "**/.tox/**",
+        "**/htmlcov/**",
+        "**/.coverage/**",
+        "**/site-packages/**",
+        "**/egg-info/**",
+        "**/*.egg-info/**",
+    ]
+    exclude_patterns = args.exclude + default_excludes if args.exclude else default_excludes
+    
     config = ScanConfig(
         paths=args.paths,
         rules_dir=args.rules,
-        include_patterns=args.include or [],
-        exclude_patterns=args.exclude or [],
+        include_patterns=include_patterns,
+        exclude_patterns=exclude_patterns,
         enabled_rules=args.enable_rule,
         disabled_rules=args.disable_rule,
         severity_filter=severity_filter,

@@ -1,0 +1,65 @@
+rules:
+  # ============================================================================
+  # LLM05: Supply Chain Vulnerabilities (OpenAI Generic)
+  # ============================================================================
+  # Detects untrusted models, plugins, and code execution from LLM output
+  # OWASP: LLM05
+  # CWE: CWE-494, CWE-502, CWE-94
+  # ============================================================================
+
+  - id: openai-supply-chain-unverified-plugin
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = openai.ChatCompletion.create(...)
+          - pattern: |
+              $RESPONSE = openai.Completion.create(...)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+      - pattern-inside: |
+          $PLUGIN_CODE = $RESPONSE.choices[0].message.content
+          ...
+          importlib.import_module($PLUGIN_CODE)
+          ...
+      - pattern-inside: |
+          $PLUGIN_CODE = $RESPONSE.choices[0].message.content
+          ...
+          __import__($PLUGIN_CODE)
+          ...
+      - pattern-inside: |
+          $PLUGIN_CODE = $RESPONSE.choices[0].message.content
+          ...
+          exec($PLUGIN_CODE)
+          ...
+      - pattern-inside: |
+          $PLUGIN_CODE = $RESPONSE.choices[0].message.content
+          ...
+          eval($PLUGIN_CODE)
+          ...
+    message: "LLM05: Supply Chain Vulnerabilities - Plugin code loaded from OpenAI output without verification"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: supply-chain
+      owasp: "LLM05"
+      owasp-title: "Supply Chain Vulnerabilities"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM05.html"
+      cwe: ["CWE-502", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/502.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm05", "supply-chain", "plugin", "code-execution", "llm", "ai-security", "openai"]
+      technology: ["python", "openai", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "medium"
+      description: "Plugin code is loaded and executed from OpenAI output without verification, allowing attackers to inject malicious code through the LLM."
+      remediation: "Never load or execute code from LLM output. Use a whitelist of trusted plugins only. Implement code signing and verification for plugins."
+      examples:
+        vulnerable: "samples/llm05_supply_chain.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://owasp.org/www-community/vulnerabilities/Code_Injection"
+    paths:
+      include:
+        - "*.py"
+

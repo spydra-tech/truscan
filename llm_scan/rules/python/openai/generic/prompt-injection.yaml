@@ -1,0 +1,44 @@
+rules:
+  - id: llm01-prompt-injection-direct
+    mode: taint
+    pattern-sources:
+      # Framework Specific Sources
+      - pattern: flask.request.args.get(...)
+      - pattern: flask.request.form.get(...)
+      - pattern: flask.request.values.get(...)
+      - pattern: flask.request.get_json(...)
+      - pattern: request.GET.get(...)
+      - pattern: request.POST.get(...)
+      - pattern: request.body
+      # Standard Library / Generic Sources
+      - pattern: input(...)
+      - pattern: sys.argv
+      - pattern: os.getenv(...)
+      - pattern: os.environ[...]
+      # Generic Heuristics (matches variable names from original rule)
+      - pattern: $USER_INPUT
+    pattern-sinks:
+      - pattern: openai.ChatCompletion.create(..., messages=...)
+      - pattern: openai.Completion.create(...)
+      - pattern: $CLIENT.chat.completions.create(..., messages=...)
+      - pattern: $CLIENT.completions.create(...)
+      - pattern: $CLIENT.messages.create(..., messages=...)
+    pattern-sanitizers:
+      - pattern: sanitize(...)
+      - pattern: escape(...)
+      - pattern: django.utils.html.escape(...)
+      - pattern: markupsafe.escape(...)
+    message: "LLM01: Prompt Injection - Untrusted input flows into LLM prompt"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: LLM01
+      cwe: ["CWE-79", "CWE-94"]
+      tags: ["prompt-injection", "injection", "openai", "anthropic", "llm", "taint", "flask", "django"]
+      confidence: high
+      impact: critical
+      likelihood: high
+      description: "Untrusted input from the environment or network flows directly into an LLM prompt. This allows for Prompt Injection attacks."
+      remediation: "Validate and sanitize all user input. Use delimiters (e.g. XML tags) to structurally separate user data from instructions."

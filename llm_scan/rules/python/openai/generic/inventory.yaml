@@ -1,0 +1,109 @@
+rules:
+  - id: llm-openai-legacy-chat
+    patterns:
+    - pattern: $VAR = openai.ChatCompletion.create(...)
+    - metavariable-regex:
+        metavariable: $VAR
+        regex: (response|resp|result|output|answer|content|text|message)
+    message: OpenAI ChatCompletion API call detected
+    severity: INFO
+    languages:
+    - python
+    metadata:
+      category: inventory
+      subcategory: llm-api-detection
+      tags:
+      - inventory
+      - openai
+      - legacy-api
+      - llm
+      - api-detection
+      technology:
+      - python
+      - openai
+      - llm
+      confidence: high
+      impact: info
+      likelihood: n/a
+      description: OpenAI ChatCompletion API call detected. This is an inventory rule to track LLM API usage in the codebase.
+      remediation: No remediation needed - this is an informational finding.
+      examples:
+        vulnerable: samples/vulnerable_app.py
+      references:
+      - https://platform.openai.com/docs/api-reference/chat
+    paths:
+      include:
+      - '*.py'
+  - id: llm-openai-legacy-completion
+    patterns:
+    - pattern: $VAR = openai.Completion.create(...)
+    - metavariable-regex:
+        metavariable: $VAR
+        regex: (response|resp|result|output|answer|content|text)
+    message: OpenAI Completion API call detected
+    severity: INFO
+    languages:
+    - python
+    metadata:
+      category: inventory
+      subcategory: llm-api-detection
+      tags:
+      - inventory
+      - openai
+      - legacy-api
+      - completion
+      - llm
+      - api-detection
+      technology:
+      - python
+      - openai
+      - llm
+      confidence: high
+      impact: info
+      likelihood: n/a
+      description: OpenAI Completion API call detected. This is an inventory rule to track LLM API usage in the codebase.
+      remediation: No remediation needed - this is an informational finding.
+      examples:
+        vulnerable: samples/vulnerable_app.py
+      references:
+      - https://platform.openai.com/docs/api-reference/completions
+    paths:
+      include:
+      - '*.py'
+  - id: llm-openai-v1-client
+    patterns:
+    - pattern: $CLIENT = OpenAI(...)
+    - pattern-inside: '...
+
+        $RESPONSE = $CLIENT.chat.completions.create(...)
+
+        '
+    message: OpenAI v1 client usage detected
+    severity: INFO
+    languages:
+    - python
+    metadata:
+      category: inventory
+      subcategory: llm-api-detection
+      tags:
+      - inventory
+      - openai
+      - v1-api
+      - llm
+      - api-detection
+      technology:
+      - python
+      - openai
+      - llm
+      confidence: high
+      impact: info
+      likelihood: n/a
+      description: OpenAI v1 client usage detected. This is an inventory rule to track LLM API usage in the codebase.
+      remediation: No remediation needed - this is an informational finding.
+      examples:
+        vulnerable: samples/vulnerable_app.py
+      references:
+      - https://platform.openai.com/docs/api-reference
+    paths:
+      include:
+      - '*.py'

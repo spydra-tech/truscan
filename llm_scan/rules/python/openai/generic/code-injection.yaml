@@ -1,0 +1,798 @@
+rules:
+- id: openai-code-injection-eval
+  patterns:
+  - pattern-either:
+    - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+        '
+    - pattern: '$RESPONSE = openai.Completion.create(...)
+
+        '
+    - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+        '
+  - pattern-either:
+    - pattern: eval($VAR)
+    - pattern: exec($VAR)
+    - pattern: compile($VAR, ...)
+  - metavariable-regex:
+      metavariable: $VAR
+      regex: (code|content|text|output|result|response|command|cmd|str|message|data|resp|answer|choices\[0\]\.message\.content|choices\[0\]\.text)
+  message: 'LLM02: Insecure Output Handling - OpenAI output passed to eval/exec/compile (code injection risk)'
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: code-injection
+    owasp: LLM02
+    owasp-title: Insecure Output Handling
+    owasp-url: https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html
+    cwe:
+    - CWE-94
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/94.html
+    tags:
+    - owasp
+    - llm02
+    - insecure-output
+    - code-injection
+    - eval
+    - exec
+    - compile
+    - llm
+    - ai-security
+    - openai
+    technology:
+    - python
+    - openai
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: OpenAI output is passed to eval(), exec(), or compile() functions without validation, allowing arbitrary code execution if the LLM output contains malicious code.
+    remediation: Never execute LLM output as code. Use safe parsing and validation instead. Use AST parsing, whitelisted operations, or structured output formats (JSON, YAML) instead of code execution.
+    examples:
+      vulnerable: samples/llm02_insecure_output.py
+    references:
+    - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    - https://cwe.mitre.org/data/definitions/94.html
+  paths:
+    include:
+    - '*.py'
+- id: openai-code-injection-direct
+  patterns:
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].message.content
+
+      ...
+
+      eval($VAR)
+
+      '
+  - pattern: '$RESPONSE = openai.Completion.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].text
+
+      ...
+
+      eval($VAR)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].message.content
+
+      ...
+
+      eval($VAR)
+
+      '
+  message: 'LLM02: Insecure Output Handling - OpenAI output directly extracted and passed to eval() (code injection)'
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: code-injection
+    owasp: LLM02
+    owasp-title: Insecure Output Handling
+    owasp-url: https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html
+    cwe:
+    - CWE-94
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/94.html
+    tags:
+    - owasp
+    - llm02
+    - insecure-output
+    - code-injection
+    - eval
+    - llm
+    - ai-security
+    - openai
+    - direct
+    technology:
+    - python
+    - openai
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: OpenAI output is directly extracted from response and passed to eval() without validation, allowing code injection.
+    remediation: Never execute LLM output as code. Validate and sanitize all LLM outputs. Use structured output formats.
+    examples:
+      vulnerable: samples/llm02_insecure_output.py
+    references:
+    - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    - https://cwe.mitre.org/data/definitions/94.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-to-eval-complete
+  pattern-either:
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      eval($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      exec($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      compile($CONTENT, ...)
+
+      '
+  - pattern: '$RESPONSE = openai.Completion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].text
+
+      ...
+
+      eval($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = openai.Completion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].text
+
+      ...
+
+      exec($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      eval($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      exec($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.content[0].text
+
+      ...
+
+      eval($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.content[0].text
+
+      ...
+
+      exec($CONTENT)
+
+      '
+  message: LLM output flows directly to eval/exec/compile - CRITICAL CODE INJECTION RISK
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: code-injection
+    cwe:
+    - CWE-94
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/94.html
+    tags:
+    - code-injection
+    - eval
+    - exec
+    - compile
+    - llm
+    - ai-security
+    - complete
+    - taint-flow
+    technology:
+    - python
+    - openai
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: 'Complete taint flow detected: LLM output flows directly from API response to eval/exec/compile functions, indicating a critical code injection vulnerability.'
+    remediation: NEVER execute LLM output as code. Use safe parsing, validation, and whitelisting. Use structured output formats (JSON, YAML) instead.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/vulnerabilities/Code_Injection
+    - https://cwe.mitre.org/data/definitions/94.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-to-subprocess-complete
+  pattern-either:
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      subprocess.run($CONTENT, ...)
+
+      '
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      subprocess.call($CONTENT, ...)
+
+      '
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      subprocess.Popen($CONTENT, ...)
+
+      '
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      os.system($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = openai.Completion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].text
+
+      ...
+
+      subprocess.run($CONTENT, ...)
+
+      '
+  - pattern: '$RESPONSE = openai.Completion.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].text
+
+      ...
+
+      os.system($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      subprocess.run($CONTENT, ...)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.choices[0].message.content
+
+      ...
+
+      os.system($CONTENT)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.content[0].text
+
+      ...
+
+      subprocess.run($CONTENT, ...)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+      ...
+
+      $CONTENT = $RESPONSE.content[0].text
+
+      ...
+
+      os.system($CONTENT)
+
+      '
+  message: LLM output flows directly to subprocess/os.system - CRITICAL COMMAND INJECTION RISK
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: command-injection
+    cwe:
+    - CWE-78
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/78.html
+    tags:
+    - command-injection
+    - subprocess
+    - os.system
+    - llm
+    - ai-security
+    - complete
+    - taint-flow
+    technology:
+    - python
+    - openai
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: 'Complete taint flow detected: LLM output flows directly from API response to subprocess/os.system functions, indicating a critical command injection vulnerability.'
+    remediation: NEVER execute LLM output as shell commands. Use subprocess with shell=False and validate all inputs. Use command whitelists.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/attacks/Command_Injection
+    - https://cwe.mitre.org/data/definitions/78.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-eval-direct
+  pattern-either:
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].message.content
+
+      ...
+
+      eval($VAR)
+
+      '
+  - pattern: '$RESPONSE = openai.Completion.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].text
+
+      ...
+
+      eval($VAR)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].message.content
+
+      ...
+
+      eval($VAR)
+
+      '
+  message: LLM output extracted and passed to eval() - CODE INJECTION
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: code-injection
+    cwe:
+    - CWE-94
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/94.html
+    tags:
+    - code-injection
+    - eval
+    - llm
+    - ai-security
+    - direct
+    - injection
+    technology:
+    - python
+    - openai
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is directly extracted from response and passed to eval() without validation, allowing code injection.
+    remediation: Never execute LLM output as code. Validate and sanitize all LLM outputs. Use structured output formats.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/vulnerabilities/Code_Injection
+    - https://cwe.mitre.org/data/definitions/94.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-exec-direct
+  pattern-either:
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].message.content
+
+      ...
+
+      exec($VAR)
+
+      '
+  - pattern: '$RESPONSE = openai.Completion.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].text
+
+      ...
+
+      exec($VAR)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].message.content
+
+      ...
+
+      exec($VAR)
+
+      '
+  message: LLM output extracted and passed to exec() - CODE INJECTION
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: code-injection
+    cwe:
+    - CWE-94
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/94.html
+    tags:
+    - code-injection
+    - exec
+    - llm
+    - ai-security
+    - direct
+    - injection
+    technology:
+    - python
+    - openai
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is directly extracted from response and passed to exec() without validation, allowing code injection.
+    remediation: Never execute LLM output as code. Validate and sanitize all LLM outputs. Use structured output formats.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/vulnerabilities/Code_Injection
+    - https://cwe.mitre.org/data/definitions/94.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-compile-direct
+  pattern-either:
+  - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].message.content
+
+      ...
+
+      compile($VAR, ...)
+
+      '
+  - pattern: '$RESPONSE = openai.Completion.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].text
+
+      ...
+
+      compile($VAR, ...)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.choices[0].message.content
+
+      ...
+
+      compile($VAR, ...)
+
+      '
+  message: LLM output extracted and passed to compile() - CODE INJECTION
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: code-injection
+    cwe:
+    - CWE-94
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/94.html
+    tags:
+    - code-injection
+    - compile
+    - llm
+    - ai-security
+    - direct
+    - injection
+    technology:
+    - python
+    - openai
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is directly extracted from response and passed to compile() without validation, allowing code injection.
+    remediation: Never compile LLM output as code. Validate and sanitize all LLM outputs. Use structured output formats.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/vulnerabilities/Code_Injection
+    - https://cwe.mitre.org/data/definitions/94.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-anthropic-eval-direct
+  pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+    ...
+
+    $VAR = $RESPONSE.content[0].text
+
+    ...
+
+    eval($VAR)
+
+    '
+  message: Anthropic LLM output extracted and passed to eval() - CODE INJECTION
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: code-injection
+    cwe:
+    - CWE-94
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/94.html
+    tags:
+    - code-injection
+    - eval
+    - llm
+    - ai-security
+    - direct
+    - injection
+    technology:
+    - python
+    - openai
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is directly extracted from response and passed to eval() without validation, allowing code injection.
+    remediation: Never execute LLM output as code. Validate and sanitize all LLM outputs. Use structured output formats.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/vulnerabilities/Code_Injection
+    - https://cwe.mitre.org/data/definitions/94.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-code-injection-eval
+  patterns:
+  - pattern-either:
+    - pattern: '$RESPONSE = openai.ChatCompletion.create(...)
+
+        '
+    - pattern: '$RESPONSE = openai.Completion.create(...)
+
+        '
+    - pattern: '$RESPONSE = $CLIENT.chat.completions.create(...)
+
+        '
+    - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+        '
+  - pattern-either:
+    - pattern: eval($VAR)
+    - pattern: exec($VAR)
+    - pattern: compile($VAR, ...)
+  - metavariable-regex:
+      metavariable: $VAR
+      regex: (code|content|text|output|result|response|command|cmd|str|message|data|resp|answer)
+  message: LLM output is passed to eval/exec/compile, which can lead to code injection
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: code-injection
+    cwe:
+    - CWE-94
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/94.html
+    tags:
+    - code-injection
+    - eval
+    - exec
+    - compile
+    - llm
+    - ai-security
+    - injection
+    technology:
+    - python
+    - openai
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is passed to eval(), exec(), or compile() functions without validation, allowing arbitrary code execution if the LLM output contains malicious code.
+    remediation: Never execute LLM output as code. Use safe parsing and validation instead. Use AST parsing, whitelisted operations, or structured output formats (JSON, YAML) instead of code execution.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/vulnerabilities/Code_Injection
+    - https://cwe.mitre.org/data/definitions/94.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-code-injection-eval-direct
+  patterns:
+  - pattern-either:
+    - pattern: eval($VAR)
+    - pattern: exec($VAR)
+    - pattern: compile($VAR, ...)
+  - pattern-inside: '$RESPONSE = openai.ChatCompletion.create(...)
+
+      ...
+
+      '
+  - metavariable-regex:
+      metavariable: $VAR
+      regex: (code|content|text|output|result|response|command|cmd|str|message|data|resp|answer)
+  message: LLM response is directly passed to eval/exec/compile
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: code-injection
+    cwe:
+    - CWE-94
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/94.html
+    tags:
+    - code-injection
+    - eval
+    - exec
+    - compile
+    - llm
+    - ai-security
+    - injection
+    - direct
+    technology:
+    - python
+    - openai
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM response content is directly extracted and passed to eval(), exec(), or compile() without any intermediate processing or validation.
+    remediation: Never execute LLM output as code. Validate and sanitize all LLM outputs. Use structured output parsing instead of code execution.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/vulnerabilities/Code_Injection
+    - https://cwe.mitre.org/data/definitions/94.html
+  paths:
+    include:
+    - '*.py'

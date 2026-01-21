@@ -1,0 +1,373 @@
+{
+  "version": "1.0",
+  "tool": {
+    "name": "llm-scan",
+    "version": "0.1.0"
+  },
+  "runs": [
+    {
+      "findings": [
+        {
+          "rule_id": "llm_scan.rules.python.llm04-dos-no-rate-limiting",
+          "message": "LLM04: Model Denial of Service - LLM API call without rate limiting protection",
+          "severity": "high",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 12,
+            "start_column": 16,
+            "end_line": 12,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-770"
+          ],
+          "remediation": "Implement rate limiting, token limits, and request throttling for LLM API calls. Use circuit breakers and request queuing. Monitor API usage and costs.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.llm04-dos-no-rate-limiting",
+            "semgrep_severity": "WARNING"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.llm04-dos-no-token-limit",
+          "message": "LLM04: Model Denial of Service - LLM API call without max_tokens limit",
+          "severity": "high",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 12,
+            "start_column": 16,
+            "end_line": 12,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-770"
+          ],
+          "remediation": "Always set max_tokens to limit response size and prevent resource exhaustion. Set appropriate limits based on use case and cost constraints.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.llm04-dos-no-token-limit",
+            "semgrep_severity": "WARNING"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.openai.generic.openai-dos-no-rate-limiting",
+          "message": "LLM04: Model Denial of Service - OpenAI API call without rate limiting protection",
+          "severity": "high",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 12,
+            "start_column": 16,
+            "end_line": 12,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-770"
+          ],
+          "remediation": "Implement rate limiting, token limits, and request throttling for OpenAI API calls. Use circuit breakers and request queuing. Monitor API usage and costs.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.openai.generic.openai-dos-no-rate-limiting",
+            "semgrep_severity": "WARNING"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.test-openai",
+          "message": "Found OpenAI ChatCompletion call",
+          "severity": "medium",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 12,
+            "start_column": 16,
+            "end_line": 12,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": null,
+          "remediation": null,
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.test-openai",
+            "semgrep_severity": "INFO"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.llm04-dos-no-rate-limiting",
+          "message": "LLM04: Model Denial of Service - LLM API call without rate limiting protection",
+          "severity": "high",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 21,
+            "start_column": 16,
+            "end_line": 21,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-770"
+          ],
+          "remediation": "Implement rate limiting, token limits, and request throttling for LLM API calls. Use circuit breakers and request queuing. Monitor API usage and costs.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.llm04-dos-no-rate-limiting",
+            "semgrep_severity": "WARNING"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.llm04-dos-no-token-limit",
+          "message": "LLM04: Model Denial of Service - LLM API call without max_tokens limit",
+          "severity": "high",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 21,
+            "start_column": 16,
+            "end_line": 21,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-770"
+          ],
+          "remediation": "Always set max_tokens to limit response size and prevent resource exhaustion. Set appropriate limits based on use case and cost constraints.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.llm04-dos-no-token-limit",
+            "semgrep_severity": "WARNING"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.openai.generic.openai-dos-no-rate-limiting",
+          "message": "LLM04: Model Denial of Service - OpenAI API call without rate limiting protection",
+          "severity": "high",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 21,
+            "start_column": 16,
+            "end_line": 21,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-770"
+          ],
+          "remediation": "Implement rate limiting, token limits, and request throttling for OpenAI API calls. Use circuit breakers and request queuing. Monitor API usage and costs.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.openai.generic.openai-dos-no-rate-limiting",
+            "semgrep_severity": "WARNING"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.test-openai",
+          "message": "Found OpenAI ChatCompletion call",
+          "severity": "medium",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 21,
+            "start_column": 16,
+            "end_line": 21,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": null,
+          "remediation": null,
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.test-openai",
+            "semgrep_severity": "INFO"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.openai.generic.openai-overreliance-critical-decision",
+          "message": "LLM09: Overreliance - Critical decision made based solely on OpenAI output without human oversight",
+          "severity": "critical",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 25,
+            "start_column": 5,
+            "end_line": 26,
+            "end_column": 33,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-754",
+            "CWE-345"
+          ],
+          "remediation": "Require human approval for critical decisions. Never automate high-risk actions based solely on LLM output. Implement multi-factor verification for sensitive operations.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.openai.generic.openai-overreliance-critical-decision",
+            "semgrep_severity": "ERROR"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.llm04-dos-no-rate-limiting",
+          "message": "LLM04: Model Denial of Service - LLM API call without rate limiting protection",
+          "severity": "high",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 30,
+            "start_column": 16,
+            "end_line": 30,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-770"
+          ],
+          "remediation": "Implement rate limiting, token limits, and request throttling for LLM API calls. Use circuit breakers and request queuing. Monitor API usage and costs.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.llm04-dos-no-rate-limiting",
+            "semgrep_severity": "WARNING"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.llm04-dos-no-token-limit",
+          "message": "LLM04: Model Denial of Service - LLM API call without max_tokens limit",
+          "severity": "high",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 30,
+            "start_column": 16,
+            "end_line": 30,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-770"
+          ],
+          "remediation": "Always set max_tokens to limit response size and prevent resource exhaustion. Set appropriate limits based on use case and cost constraints.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.llm04-dos-no-token-limit",
+            "semgrep_severity": "WARNING"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.openai.generic.openai-dos-no-rate-limiting",
+          "message": "LLM04: Model Denial of Service - OpenAI API call without rate limiting protection",
+          "severity": "high",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 30,
+            "start_column": 16,
+            "end_line": 30,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-400",
+            "CWE-770"
+          ],
+          "remediation": "Implement rate limiting, token limits, and request throttling for OpenAI API calls. Use circuit breakers and request queuing. Monitor API usage and costs.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.openai.generic.openai-dos-no-rate-limiting",
+            "semgrep_severity": "WARNING"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.test-openai",
+          "message": "Found OpenAI ChatCompletion call",
+          "severity": "medium",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 30,
+            "start_column": 16,
+            "end_line": 30,
+            "end_column": 72,
+            "snippet": null
+          },
+          "cwe": null,
+          "remediation": null,
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.test-openai",
+            "semgrep_severity": "INFO"
+          }
+        },
+        {
+          "rule_id": "llm_scan.rules.python.openai.generic.openai-overreliance-critical-decision",
+          "message": "LLM09: Overreliance - Critical decision made based solely on OpenAI output without human oversight",
+          "severity": "critical",
+          "category": "other",
+          "location": {
+            "file_path": "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py",
+            "start_line": 33,
+            "start_column": 5,
+            "end_line": 35,
+            "end_column": 37,
+            "snippet": null
+          },
+          "cwe": [
+            "CWE-754",
+            "CWE-345"
+          ],
+          "remediation": "Require human approval for critical decisions. Never automate high-risk actions based solely on LLM output. Implement multi-factor verification for sensitive operations.",
+          "dataflow_path": [],
+          "metadata": {
+            "semgrep_rule_id": "llm_scan.rules.python.openai.generic.openai-overreliance-critical-decision",
+            "semgrep_severity": "ERROR"
+          }
+        }
+      ],
+      "scanned_files": [
+        "/Users/manish/code-scan2/tests/fixtures/overreliance_test.py"
+      ],
+      "rules_loaded": [
+        "/Users/manish/code-scan2/llm_scan/rules/python/llm-owasp-top10.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/llm-basic-rules.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/test-simple.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/llm-direct-rules.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/llm-taint-sources.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/llm-code-injection.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/llm-command-injection.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/llm-complete-rules.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/flask/xss.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/sensitive-info-disclosure.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/sql-injection.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/insecure-plugin-design.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/model-dos.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/supply-chain.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/code-injection.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/excessive-agency.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/model-theft.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/training-data-poisoning.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/overreliance.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/path-traversal.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/command-injection.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/ssrf.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/generic/prompt-injection.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/openai/django/xss.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/anthropic/generic/code-injection.yaml",
+        "/Users/manish/code-scan2/llm_scan/rules/python/anthropic/generic/prompt-injection.yaml"
+      ],
+      "scan_duration_seconds": 2.5223050117492676,
+      "metadata": {}
+    }
+  ]
+}

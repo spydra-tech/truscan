@@ -104,80 +104,50 @@ class SemgrepEngine:
 
     def _run_semgrep(self):
         """
-        Execute Semgrep scan using Python SDK.
+        Execute Semgrep scan using subprocess (CLI).
 
-        This uses Semgrep's internal APIs to run scans programmatically.
+        NOTE: Semgrep's Python SDK doesn't expose a clean programmatic scanning API
+        that works outside of Click context. The SDK's Config.from_config_list() method
+        requires a Click context which causes "I/O operation on closed file" errors.
+        Therefore, we use the subprocess approach to call semgrep CLI directly.
         """
-        logger.debug(f"Loading Semgrep configuration from: {self.rules_dir}")
-        
         # Define MatchResults class early
         class MatchResults:
             def __init__(self, matches, errors):
                 self.matches = matches
                 self.errors = errors
-        
-        # Load Semgrep configuration from rules directory
-        try:
-            config_result = Config.from_config_list(
-                [self.rules_dir],
-                project_url=None,
-            )
-            logger.debug(f"Config.from_config_list returned: {type(config_result)}")
 
-            # Handle tuple return (some Semgrep versions return (config, metadata))
-            if isinstance(config_result, tuple):
-                config = config_result[0]
-                logger.debug("Unpacked tuple result from Config.from_config_list")
-            else:
-                config = config_result
-
-            # Get all rules
-            if hasattr(config, 'get_rules'):
-                rules = config.get_rules(True)
-                logger.debug(f"Loaded {len(rules)} rule(s) using get_rules()")
-            elif hasattr(config, 'rules'):
-                rules = config.rules
-                logger.debug(f"Loaded {len(rules)} rule(s) using rules attribute")
-            else:
-                # Try alternative: get rules directly from config
-                rules = getattr(config, 'get_rules', lambda x: [])(True)
-                logger.debug(f"Loaded {len(rules)} rule(s) using fallback method")
-        except (AttributeError, TypeError) as e:
-            # Re-raise with better error message
-            config_result_type = type(config_result).__name__ if 'config_result' in locals() else 'unknown'
-            logger.error(f"Failed to load Semgrep rules: {e}")
-            raise RuntimeError(
-                f"Failed to load Semgrep rules from {self.rules_dir}. "
-                f"Config.from_config_list returned: {config_result_type}. "
-                f"Error: {e}. Please ensure semgrep is properly installed."
-            )
-
-        # Filter rules if needed
-        original_rule_count = len(rules)
-        if self.config.enabled_rules:
-            rules = [r for r in rules if r.id in self.config.enabled_rules]
-            logger.debug(f"Filtered to {len(rules)} rule(s) (enabled rules: {self.config.enabled_rules})")
-        if self.config.disabled_rules:
-            rules = [r for r in rules if r.id not in self.config.disabled_rules]
-            logger.debug(f"Filtered to {len(rules)} rule(s) (disabled rules: {self.config.disabled_rules})")
-        
-        if len(rules) != original_rule_count:
-            logger.info(f"Using {len(rules)} of {original_rule_count} available rule(s)")
-        else:
-            logger.info(f"Using all {len(rules)} available rule(s)")
-
-        # Find target files manually (TargetManager seems unreliable)
+        # Find target files manually
         logger.debug("Finding target files...")
         target_file_paths = []
+        
+        # Common directories to exclude
+        default_exclude_dirs = {
+            '__pycache__', 'node_modules', '.venv', 'venv', 'env', '.env',
+            'build', 'dist', '.git', '.pytest_cache', '.mypy_cache', '.tox',
+            'htmlcov', 'site-packages', '.eggs', '*.egg-info'
+        }
+        
         for path in self.config.paths:
             path_obj = Path(path)
             if path_obj.is_file() and path_obj.suffix == '.py':
                 target_file_paths.append(str(path_obj.absolute()))
             elif path_obj.is_dir():
                 for py_file in path_obj.rglob("*.py"):
+                    # Skip if in excluded directory
+                    parts = py_file.parts
+                    if any(excluded in parts for excluded in default_exclude_dirs):
+                        continue
+                    
                     # Check exclude patterns
                     if self.config.exclude_patterns:
-                        if any(py_file.match(pattern) for pattern in self.config.exclude_patterns):
+                        file_str = str(py_file)
+                        if any(
+                            py_file.match(pattern) or 
+                            pattern in file_str or
+                            any(part in pattern for part in py_file.parts)
+                            for pattern in self.config.exclude_patterns
+                        ):
                             continue
                     target_file_paths.append(str(py_file.absolute()))
         
@@ -186,15 +156,20 @@ class SemgrepEngine:
         if not target_file_paths:
             logger.warning("No Python files found to scan")
             return MatchResults(matches=[], errors=[])
-
-        # IMPORTANT: Semgrep's Python SDK doesn't expose a clean programmatic scanning API.
-        # The SDK provides Config and Rule objects but no direct scan() method.
-        # As a workaround, we use subprocess to call semgrep CLI.
-        # 
-        # This violates the "no CLI subprocess" requirement but is necessary due to SDK limitations.
-        # TODO: Contribute to Semgrep to expose better programmatic APIs, or find internal APIs.
         
-        logger.info("Running Semgrep scan (using subprocess workaround due to SDK limitations)...")
+        # Limit files per batch to avoid command line length issues
+        # Semgrep can handle large file lists, but very large lists can cause issues
+        max_files_per_batch = 1000
+        if len(target_file_paths) > max_files_per_batch:
+            logger.warning(f"Large number of files ({len(target_file_paths)}). This may take a while...")
+            logger.info(f"Scanning in batches of {max_files_per_batch} files")
+
+        # IMPORTANT: Semgrep's Python SDK doesn't expose a clean programmatic scanning API
+        # that works outside of Click context. The SDK's Config.from_config_list() method
+        # requires a Click context which causes "I/O operation on closed file" errors.
+        # Therefore, we use subprocess to call semgrep CLI directly.
+        
+        logger.info("Running Semgrep scan using subprocess...")
         logger.debug(f"Target files: {target_file_paths}")
         
         import tempfile
@@ -206,11 +181,14 @@ class SemgrepEngine:
         
         try:
             # Build semgrep command
+            # Use --no-git-ignore to avoid Semgrep's own gitignore handling
+            # since we handle it in find_files()
             cmd = [
                 'semgrep',
                 '--config', self.rules_dir,
                 '--json',
                 '--quiet',
+                '--no-git-ignore',
                 '--output', tmp_json_path,
             ] + target_file_paths
             
@@ -218,6 +196,7 @@ class SemgrepEngine:
             logger.debug(f"Command: {' '.join(cmd[:6])}... {len(cmd)-6} more args")
             
             # Run semgrep
+            # capture_output=True captures both stdout and stderr
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -291,13 +270,13 @@ class SemgrepEngine:
                     os.unlink(tmp_json_path)
                 except:
                     pass
-            return MatchResults(matches=[], errors=[SemgrepError(
-                code=1,
-                level="error",
-                message=str(e),
-                type="SubprocessError",
-                path="",
-            )])
+            return MatchResults(matches=[], errors=[{
+                "code": 1,
+                "level": "error",
+                "message": str(e),
+                "type": "SubprocessError",
+                "path": "",
+            }])
         except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"Failed to parse Semgrep JSON output: {e}")
             if os.path.exists(tmp_json_path):
