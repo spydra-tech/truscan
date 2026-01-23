@@ -430,9 +430,10 @@ class SemgrepEngine:
                 # Map category from rule ID
                 category = self.CATEGORY_MAP.get(rule_id, Category.OTHER)
 
-                # Extract CWE and remediation if available
+                # Extract CWE, remediation, and other metadata if available
                 cwe = None
                 remediation = None
+                rule_metadata = {}
                 if isinstance(match, dict):
                     extra = match.get("extra", {})
                     if isinstance(extra, dict):
@@ -440,11 +441,25 @@ class SemgrepEngine:
                         if isinstance(metadata, dict):
                             cwe = metadata.get("cwe")
                             remediation = metadata.get("remediation")
+                            # Extract all metadata fields for AI analysis
+                            rule_metadata = {
+                                "confidence": metadata.get("confidence", "high"),
+                                "description": metadata.get("description"),
+                                "impact": metadata.get("impact"),
+                                "likelihood": metadata.get("likelihood"),
+                            }
                 else:
                     rule = getattr(match, "rule", None)
                     if rule and hasattr(rule, "metadata") and rule.metadata is not None and isinstance(rule.metadata, dict):
                         cwe = rule.metadata.get("cwe")
                         remediation = rule.metadata.get("remediation")
+                        # Extract all metadata fields for AI analysis
+                        rule_metadata = {
+                            "confidence": rule.metadata.get("confidence", "high"),
+                            "description": rule.metadata.get("description"),
+                            "impact": rule.metadata.get("impact"),
+                            "likelihood": rule.metadata.get("likelihood"),
+                        }
 
                 # Extract dataflow path if available
                 dataflow_path = []
@@ -488,6 +503,7 @@ class SemgrepEngine:
                     metadata={
                         "semgrep_rule_id": rule_id,
                         "semgrep_severity": rule_severity,
+                        **rule_metadata,  # Include confidence, description, impact, likelihood
                     },
                 )
 

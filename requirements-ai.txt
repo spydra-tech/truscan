@@ -1,0 +1,8 @@
+# AI dependencies for LLM security scanner
+# Install with: pip install -r requirements-ai.txt
+
+# OpenAI provider (for --ai-provider openai)
+openai>=1.0.0
+
+# Anthropic provider (for --ai-provider anthropic)
+anthropic>=0.18.0

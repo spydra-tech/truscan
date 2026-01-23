@@ -62,20 +62,47 @@ class ConsoleFormatter:
                     if use_color
                     else ""
                 )
+                
+                # Show source indicator
+                source_indicator = ""
+                if finding.ai_analysis:
+                    if finding.ai_filtered:
+                        source_indicator = " [AI: FILTERED]"
+                    elif finding.source == "ai-enhanced":
+                        source_indicator = " [AI: ENHANCED]"
+                    else:
+                        source_indicator = " [AI: ANALYZED]"
+                else:
+                    source_indicator = " [Semgrep]"
+                
                 output.append(
                     f"  {severity_color}[{finding.severity.value.upper()}]{self.RESET if use_color else ''} "
-                    f"{finding.rule_id}"
+                    f"{finding.rule_id}{source_indicator}"
                 )
                 output.append(
                     f"    Line {finding.location.start_line}:{finding.location.start_column} - {finding.message}"
                 )
+                
+                # Show AI analysis if present
+                if finding.ai_analysis and not finding.ai_filtered:
+                    ai_confidence = finding.ai_analysis.confidence
+                    confidence_emoji = "✓" if ai_confidence >= 0.7 else "⚠" if ai_confidence >= 0.5 else "?"
+                    output.append(
+                        f"    AI Analysis: {confidence_emoji} Confidence: {ai_confidence:.2f} - "
+                        f"{finding.ai_analysis.reasoning[:100]}{'...' if len(finding.ai_analysis.reasoning) > 100 else ''}"
+                    )
+                
                 if finding.location.snippet:
                     # Show snippet with context
                     snippet_lines = finding.location.snippet.strip().split("\n")
                     for snippet_line in snippet_lines[:3]:  # Limit to 3 lines
                         output.append(f"    {snippet_line}")
+                
                 if finding.remediation:
-                    output.append(f"    Remediation: {finding.remediation}")
+                    remediation_label = "Remediation"
+                    if finding.source == "ai-enhanced":
+                        remediation_label = "Remediation (AI-Enhanced)"
+                    output.append(f"    {remediation_label}: {finding.remediation}")
                 output.append("")
 
         output.append("=" * 80)

@@ -41,6 +41,22 @@ python -m llm_scan.runner \
   --severity critical high \
   --format json \
   --out results.json
+
+# Enable AI-based false positive filtering
+python -m llm_scan.runner \
+  . \
+  --enable-ai-filter \
+  --ai-provider openai \
+  --ai-model gpt-4 \
+  --format console
+
+# AI filtering with specific rules only
+python -m llm_scan.runner \
+  . \
+  --enable-ai-filter \
+  --ai-analyze-rules openai-prompt-injection-direct \
+  --ai-analyze-rules openai-excessive-agency-file-deletion \
+  --format console
 ```
 
 ### Python Library Usage
@@ -86,6 +102,63 @@ if response.success:
 
 See [vscode-integration.md](vscode-integration.md) for the complete integration contract.
 
+## AI-Powered False Positive Filtering
+
+The scanner includes an optional AI-based false positive filter that uses LLM APIs to analyze Semgrep findings and filter out false positives. This feature helps reduce noise and improve the accuracy of security findings.
+
+### How It Works
+
+1. **Semgrep Scan**: First, Semgrep runs and finds potential vulnerabilities
+2. **AI Analysis**: Selected findings are analyzed by an AI model (OpenAI GPT-4 or Anthropic Claude)
+3. **Context-Aware Filtering**: AI considers code context, sanitization, framework protections, and exploitability
+4. **Confidence-Based Filtering**: Only high-confidence false positives are filtered (configurable threshold)
+
+### Usage
+
+```bash
+# Enable AI filtering with OpenAI
+python -m llm_scan.runner . \
+  --enable-ai-filter \
+  --ai-provider openai \
+  --ai-model gpt-4 \
+  --ai-confidence-threshold 0.7
+
+# Use Anthropic Claude
+python -m llm_scan.runner . \
+  --enable-ai-filter \
+  --ai-provider anthropic \
+  --ai-model claude-3-opus-20240229
+
+# Analyze only specific rules (cost optimization)
+python -m llm_scan.runner . \
+  --enable-ai-filter \
+  --ai-analyze-rules openai-prompt-injection-direct \
+  --ai-analyze-rules openai-excessive-agency-file-deletion
+```
+
+### Configuration Options
+
+- `--enable-ai-filter`: Enable AI filtering
+- `--ai-provider`: Choose provider (`openai` or `anthropic`)
+- `--ai-model`: Model name (e.g., `gpt-4`, `gpt-3.5-turbo`, `claude-3-opus-20240229`)
+- `--ai-api-key`: API key (or use environment variables)
+- `--ai-confidence-threshold`: Confidence threshold (0.0-1.0, default: 0.7)
+- `--ai-analyze-rules`: Specific rule IDs to analyze (can be used multiple times)
+
+### Cost Considerations
+
+- AI filtering is **optional** and **disabled by default**
+- Only analyzes findings with `confidence: "medium"` or `"low"` by default
+- Uses caching to avoid re-analyzing identical code patterns
+- Processes findings in batches for efficiency
+- Estimated cost: ~$0.01-0.10 per analyzed finding
+
+### When to Use AI Filtering
+
+- **Recommended for**: Medium/low confidence rules, complex patterns, reducing false positives
+- **Not needed for**: High confidence rules, simple patterns, cost-sensitive environments
+- **Best practice**: Start with specific rules (`--ai-analyze-rules`) to test effectiveness
+
 ## Detected Vulnerabilities
 
 The scanner detects vulnerabilities based on the **OWASP Top 10 for LLM Applications**:
@@ -128,7 +201,11 @@ llm_scan/
 ├── config.py              # Configuration management
 ├── runner.py              # Main entry point and CLI
 ├── engine/
-│   └── semgrep_engine.py  # Semgrep Python SDK integration
+│   ├── semgrep_engine.py  # Semgrep Python SDK integration
+│   ├── ai_engine.py       # AI-based false positive filtering
+│   └── ai_providers.py    # AI provider implementations (OpenAI, Anthropic)
+├── utils/
+│   └── code_context.py    # Code context extraction for AI analysis
 ├── output/
 │   ├── sarif.py           # SARIF formatter
 │   ├── json.py            # JSON formatter

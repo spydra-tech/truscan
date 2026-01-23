@@ -10,11 +10,13 @@ from typing import List, Optional
 
 from .config import ScanConfig
 from .enrich.uploader import StubUploader, Uploader
+from .engine.ai_engine import AIEngine
 from .engine.semgrep_engine import SemgrepEngine
 from .models import ScanRequest, ScanResponse, ScanResult
 from .output.console import ConsoleFormatter
 from .output.json import JSONFormatter
 from .output.sarif import SARIFFormatter
+from .utils.code_context import load_file_contents
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -161,6 +163,22 @@ def run_scan(config: ScanConfig, uploader: Optional[Uploader] = None) -> ScanRes
     )
     logger.info(f"✓ Found {len(scanned_files)} file(s) to scan")
 
+    # Check AI filtering configuration
+    if config.enable_ai_filter:
+        logger.info("")
+        logger.info("=" * 80)
+        logger.info("🤖 AI FILTERING: ENABLED")
+        logger.info("=" * 80)
+        logger.info(f"  Provider: {config.ai_provider}")
+        logger.info(f"  Model: {config.ai_model}")
+        logger.info(f"  Confidence Threshold: {config.ai_confidence_threshold}")
+        if config.ai_analyze_rules:
+            logger.info(f"  Analyzing specific rules: {', '.join(config.ai_analyze_rules)}")
+        else:
+            logger.info("  Analyzing all medium/low confidence findings")
+        logger.info("=" * 80)
+        logger.info("")
+
     # Initialize engine
     logger.info("")
     logger.info("Step 2: Initializing Semgrep engine...")
@@ -174,6 +192,55 @@ def run_scan(config: ScanConfig, uploader: Optional[Uploader] = None) -> ScanRes
     logger.debug(f"Scanning {len(scanned_files)} file(s) with Semgrep")
     findings = engine.scan()
     logger.info(f"✓ Scan completed, found {len(findings)} finding(s)")
+
+    # AI filtering (if enabled)
+    if config.enable_ai_filter:
+        logger.info("")
+        logger.info("=" * 80)
+        logger.info("Step 3.5: Running AI Analysis...")
+        logger.info("=" * 80)
+        try:
+            ai_engine = AIEngine(config)
+            if not ai_engine.provider:
+                logger.error("")
+                logger.error("=" * 80)
+                logger.error("❌ AI PROVIDER INITIALIZATION FAILED")
+                logger.error("=" * 80)
+                logger.error("Possible causes:")
+                logger.error("  1. Missing package - Run: pip install openai (or anthropic)")
+                logger.error("  2. Missing API key - Set OPENAI_API_KEY or ANTHROPIC_API_KEY env var")
+                logger.error("  3. Invalid API key format")
+                logger.error("")
+                logger.error("Check the error messages above for details.")
+                logger.error("=" * 80)
+                logger.warning("Continuing without AI filtering")
+            else:
+                logger.info("✓ AI engine initialized successfully")
+                logger.info(f"  Found {len(findings)} finding(s) from Semgrep")
+                file_contents = load_file_contents(findings)
+                findings_before_ai = len(findings)
+                findings = ai_engine.filter_false_positives(findings, file_contents)
+                findings_after_ai = len(findings)
+                filtered_count = findings_before_ai - findings_after_ai
+                logger.info("")
+                if filtered_count > 0:
+                    logger.info(
+                        f"✓ AI analysis completed, filtered {filtered_count} false positive(s)"
+                    )
+                else:
+                    logger.info("✓ AI analysis completed")
+                    if findings_before_ai == 0:
+                        logger.info("  (No findings to analyze)")
+                    else:
+                        logger.info("  (No false positives filtered - all findings confirmed as true positives)")
+        except Exception as e:
+            logger.error("")
+            logger.error("=" * 80)
+            logger.error(f"❌ AI FILTERING FAILED: {e}")
+            logger.error("=" * 80)
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error("Check the error messages above for details.")
+            logger.warning("Continuing with unfiltered findings")
 
     # Get rules loaded (from rules directory)
     logger.info("")
@@ -189,9 +256,26 @@ def run_scan(config: ScanConfig, uploader: Optional[Uploader] = None) -> ScanRes
 
     scan_duration = time.time() - start_time
 
-    # Group findings by severity
+    # Group findings by severity and track AI analysis
     findings_by_severity = {}
+    ai_filtered_count = 0
+    ai_analyzed_count = 0
+    ai_enhanced_count = 0
+    semgrep_only_count = 0
+    
     for finding in findings:
+        if finding.ai_filtered:
+            ai_filtered_count += 1
+            continue
+        
+        # Track AI analysis
+        if finding.ai_analysis:
+            ai_analyzed_count += 1
+            if finding.source == "ai-enhanced":
+                ai_enhanced_count += 1
+        else:
+            semgrep_only_count += 1
+        
         severity = finding.severity.value
         findings_by_severity[severity] = findings_by_severity.get(severity, 0) + 1
 
@@ -213,7 +297,18 @@ def run_scan(config: ScanConfig, uploader: Optional[Uploader] = None) -> ScanRes
     logger.info(f"  Files scanned: {len(scanned_files)}")
     logger.info(f"  Rules loaded: {len(rules_loaded)}")
     logger.info(f"  Total findings: {len(findings)}")
+    
+    # AI Analysis breakdown
+    if config.enable_ai_filter:
+        logger.info("")
+        logger.info("  AI Analysis:")
+        logger.info(f"    - Analyzed by AI: {ai_analyzed_count} finding(s)")
+        logger.info(f"    - Remediation enhanced: {ai_enhanced_count} finding(s)")
+        logger.info(f"    - Filtered (false positives): {ai_filtered_count} finding(s)")
+        logger.info(f"    - Semgrep only: {semgrep_only_count} finding(s)")
+    
     if findings_by_severity:
+        logger.info("")
         logger.info("  Findings by severity:")
         for severity, count in sorted(findings_by_severity.items(), key=lambda x: ["critical", "high", "medium", "low", "info"].index(x[0]) if x[0] in ["critical", "high", "medium", "low", "info"] else 99):
             logger.info(f"    {severity.upper()}: {count}")
@@ -341,6 +436,38 @@ def main() -> int:
         "--upload",
         help="Upload endpoint URL (stub implementation)",
     )
+    # AI filtering options
+    parser.add_argument(
+        "--enable-ai-filter",
+        action="store_true",
+        help="Enable AI-based false positive filtering",
+    )
+    parser.add_argument(
+        "--ai-provider",
+        choices=["openai", "anthropic"],
+        default="openai",
+        help="AI provider to use (default: openai)",
+    )
+    parser.add_argument(
+        "--ai-model",
+        default="gpt-4",
+        help="AI model to use (default: gpt-4)",
+    )
+    parser.add_argument(
+        "--ai-api-key",
+        help="AI API key (or use OPENAI_API_KEY/ANTHROPIC_API_KEY env var)",
+    )
+    parser.add_argument(
+        "--ai-confidence-threshold",
+        type=float,
+        default=0.7,
+        help="AI confidence threshold for filtering (0.0-1.0, default: 0.7)",
+    )
+    parser.add_argument(
+        "--ai-analyze-rules",
+        action="append",
+        help="Specific rule IDs to analyze with AI (can be used multiple times)",
+    )
 
     args = parser.parse_args()
 
@@ -349,6 +476,10 @@ def main() -> int:
     if args.debug:
         log_level = logging.DEBUG
     elif args.verbose:
+        log_level = logging.INFO
+    elif args.enable_ai_filter:
+        # Automatically enable INFO logging when AI filtering is enabled
+        # so users can see AI analysis progress
         log_level = logging.INFO
     
     logging.basicConfig(
@@ -390,6 +521,14 @@ def main() -> int:
     ]
     exclude_patterns = args.exclude + default_excludes if args.exclude else default_excludes
     
+    # Get AI API key from args or environment
+    ai_api_key = args.ai_api_key
+    if not ai_api_key and args.enable_ai_filter:
+        if args.ai_provider == "openai":
+            ai_api_key = os.getenv("OPENAI_API_KEY")
+        elif args.ai_provider == "anthropic":
+            ai_api_key = os.getenv("ANTHROPIC_API_KEY")
+
     config = ScanConfig(
         paths=args.paths,
         rules_dir=args.rules,
@@ -401,6 +540,12 @@ def main() -> int:
         output_format=args.format,
         output_file=args.out,
         respect_gitignore=not args.no_gitignore,
+        enable_ai_filter=args.enable_ai_filter,
+        ai_provider=args.ai_provider,
+        ai_api_key=ai_api_key,
+        ai_model=args.ai_model,
+        ai_confidence_threshold=args.ai_confidence_threshold,
+        ai_analyze_rules=args.ai_analyze_rules,
     )
 
     # Setup uploader if requested

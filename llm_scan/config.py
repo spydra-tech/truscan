@@ -26,6 +26,15 @@ class ScanConfig:
     output_file: Optional[str] = None
     respect_gitignore: bool = True
     max_target_bytes: int = 1_000_000  # 1MB per file limit
+    # AI filtering configuration
+    enable_ai_filter: bool = False
+    ai_provider: str = "openai"  # "openai", "anthropic", "local"
+    ai_api_key: Optional[str] = None
+    ai_model: str = "gpt-4"  # Model name for the provider
+    ai_confidence_threshold: float = 0.7  # Only filter if confidence > threshold
+    ai_batch_size: int = 10  # Process findings in batches
+    ai_cache_enabled: bool = True  # Cache AI responses
+    ai_analyze_rules: Optional[List[str]] = None  # Specific rules to analyze (None = all)
 
     @classmethod
     def from_dict(cls, data: dict) -> "ScanConfig":
@@ -46,6 +55,14 @@ class ScanConfig:
             output_file=data.get("output_file"),
             respect_gitignore=data.get("respect_gitignore", True),
             max_target_bytes=data.get("max_target_bytes", 1_000_000),
+            enable_ai_filter=data.get("enable_ai_filter", False),
+            ai_provider=data.get("ai_provider", "openai"),
+            ai_api_key=data.get("ai_api_key"),
+            ai_model=data.get("ai_model", "gpt-4"),
+            ai_confidence_threshold=data.get("ai_confidence_threshold", 0.7),
+            ai_batch_size=data.get("ai_batch_size", 10),
+            ai_cache_enabled=data.get("ai_cache_enabled", True),
+            ai_analyze_rules=data.get("ai_analyze_rules"),
         )
 
     def get_default_rules_dir(self) -> str:

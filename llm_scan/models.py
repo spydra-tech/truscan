@@ -51,6 +51,18 @@ class DataflowStep:
 
 
 @dataclass
+class AIVerdict:
+    """AI analysis verdict for a finding."""
+
+    is_false_positive: bool
+    confidence: float  # 0.0 to 1.0
+    reasoning: str
+    suggested_severity: Optional[Severity] = None
+    enhanced_remediation: Optional[str] = None  # AI-generated remediation guidance
+    additional_context: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class Finding:
     """A security finding."""
 
@@ -63,10 +75,13 @@ class Finding:
     remediation: Optional[str] = None
     dataflow_path: List[DataflowStep] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    ai_analysis: Optional[AIVerdict] = None
+    ai_filtered: bool = False
+    source: str = "semgrep"  # Track source: "semgrep" or "ai-enhanced"
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert finding to dictionary."""
-        return {
+        result = {
             "rule_id": self.rule_id,
             "message": self.message,
             "severity": self.severity.value,
@@ -94,6 +109,33 @@ class Finding:
             ],
             "metadata": self.metadata,
         }
+        
+        # Add source tracking
+        result["source"] = self.source
+        
+        # Add AI analysis if present
+        if self.ai_analysis:
+            result["ai_analysis"] = {
+                "is_false_positive": self.ai_analysis.is_false_positive,
+                "confidence": self.ai_analysis.confidence,
+                "reasoning": self.ai_analysis.reasoning,
+                "suggested_severity": (
+                    self.ai_analysis.suggested_severity.value
+                    if self.ai_analysis.suggested_severity
+                    else None
+                ),
+                "enhanced_remediation": self.ai_analysis.enhanced_remediation,
+                "additional_context": self.ai_analysis.additional_context,
+            }
+            result["ai_filtered"] = self.ai_filtered
+            # If AI provided enhanced remediation, use it
+            if self.ai_analysis.enhanced_remediation:
+                result["remediation"] = self.ai_analysis.enhanced_remediation
+                result["remediation_source"] = "ai-enhanced"
+            elif self.remediation:
+                result["remediation_source"] = "semgrep"
+        
+        return result
 
 
 @dataclass
