@@ -1,0 +1,217 @@
+rules:
+  # ============================================================================
+  # LLM02: Code Injection - LlamaIndex Query Engines (CVE-2023-39662, CVE-2024-3098)
+  # ============================================================================
+  # Detects code execution vulnerabilities in LlamaIndex query engines
+  # CVE-2023-39662: PandasQueryEngine RCE via exec()
+  # CVE-2024-3098: safe_eval bypass in exec_utils
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules llamaindex-llm02-pandas-query-engine \
+  #     --ai-analyze-rules llamaindex-llm02-safe-eval-bypass \
+  #     --ai-analyze-rules llamaindex-llm02-query-engine-to-eval
+  #
+  # OWASP: LLM02
+  # CWE: CWE-94
+  # ============================================================================
+
+  - id: llamaindex-llm02-pandas-query-engine
+    patterns:
+      - pattern-either:
+          # PandasQueryEngine with user input
+          - pattern: |
+              PandasQueryEngine(...).query($USER_INPUT)
+          - pattern: |
+              $PANDAS_ENGINE = PandasQueryEngine(...)
+              ...
+              $PANDAS_ENGINE.query($USER_INPUT)
+          - pattern: |
+              PandasQueryEngine(...).retrieve($USER_INPUT)
+          - pattern: |
+              $PANDAS_ENGINE = PandasQueryEngine(...)
+              ...
+              $PANDAS_ENGINE.retrieve($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query|question)
+    message: "LLM02: Code Injection - PandasQueryEngine execution with user input allows arbitrary code execution (CVE-2023-39662)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (PandasQueryEngine)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "pandas-query-engine", "llamaindex", "cve-2023-39662", "exec", "rce", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "PandasQueryEngine is executed with user input. PandasQueryEngine uses exec() to execute generated Python code, and prompt injection can lead to arbitrary code execution. CVE-2023-39662."
+      remediation: "Never use PandasQueryEngine with untrusted user input. If PandasQueryEngine is necessary, implement strict input validation, output sanitization, and code execution sandboxing. Consider using safer alternatives that don't execute generated code. Restrict PandasQueryEngine to trusted, validated inputs only."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_pandas_query_engine.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://advisories.gitlab.com/pkg/pypi/llama-index/CVE-2023-39662"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm02-safe-eval-bypass
+    patterns:
+      - pattern-either:
+          # safe_eval with LLM output
+          - pattern: |
+              safe_eval($LLM_OUTPUT)
+          - pattern: |
+              exec_utils.safe_eval($LLM_OUTPUT)
+          - pattern: |
+              $EXEC_UTILS.safe_eval($LLM_OUTPUT)
+          - pattern: |
+              from llama_index.core.utils import exec_utils
+              ...
+              exec_utils.safe_eval($LLM_OUTPUT)
+      - pattern-inside: |
+          $LLM_OUTPUT = ...
+          ...
+          safe_eval($LLM_OUTPUT)
+      - metavariable-regex:
+          metavariable: $LLM_OUTPUT
+          regex: (\.query\(|\.retrieve\(|\.response|\.text|\.content|choices\[0\]|message\.content|\.output|\.result|response_text|llm_output|generated_text|completion)
+    message: "LLM02: Code Injection - safe_eval with LLM output allows code execution bypass (CVE-2024-3098)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (safe_eval)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "safe-eval", "llamaindex", "cve-2024-3098", "exec-utils", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "safe_eval function from exec_utils is used with LLM output. CVE-2024-3098 demonstrates that safe_eval has insufficient input validation and can be bypassed using lambda expressions and object reflection, leading to arbitrary code execution. Affects llama-index-core versions before 0.10.24."
+      remediation: "Upgrade to llama-index-core version 0.10.24 or higher. Never use safe_eval with untrusted LLM output. If code execution is necessary, implement strict input validation, use AST parsing instead of eval, or use sandboxed execution environments. Consider alternatives that don't require code execution."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_safe_eval.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://advisories.gitlab.com/pkg/pypi/llama-index-core/CVE-2024-3098"
+        - "https://security.snyk.io/vuln/SNYK-PYTHON-LLAMAINDEXCORE-6595959"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm02-query-engine-to-eval
+    patterns:
+      - pattern-either:
+          # Query engine output to eval/exec/compile
+          - pattern: |
+              $RESPONSE = $QUERY_ENGINE.query(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = $QUERY_ENGINE.query(...)
+              ...
+              exec($RESPONSE)
+          - pattern: |
+              $RESPONSE = $QUERY_ENGINE.query(...)
+              ...
+              compile($RESPONSE, ...)
+          - pattern: |
+              $RESPONSE = $QUERY_ENGINE.retrieve(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = $QUERY_ENGINE.retrieve(...)
+              ...
+              exec($RESPONSE)
+          - pattern: |
+              $RESPONSE = $INDEX.as_query_engine().query(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = $INDEX.as_query_engine().query(...)
+              ...
+              exec($RESPONSE)
+    message: "LLM02: Code Injection - Query engine output passed to eval/exec/compile"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "query-engine", "llamaindex", "eval", "exec", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LlamaIndex query engine output is passed directly to eval(), exec(), or compile() functions. Query engines may generate code or structured output that, when executed, leads to arbitrary code execution."
+      remediation: "NEVER execute query engine output as code. Use safe parsing methods, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_query_engine_code_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm02-python-code-query-engine
+    patterns:
+      - pattern-either:
+          # PythonCodeQueryEngine with user input (if exists)
+          - pattern: |
+              PythonCodeQueryEngine(...).query($USER_INPUT)
+          - pattern: |
+              $CODE_ENGINE = PythonCodeQueryEngine(...)
+              ...
+              $CODE_ENGINE.query($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query|question)
+    message: "LLM02: Code Injection - PythonCodeQueryEngine execution with user input allows arbitrary code execution"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (PythonCodeQueryEngine)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "python-code-query-engine", "llamaindex", "exec", "rce", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - depends on implementation
+      impact: "critical"
+      likelihood: "high"
+      description: "PythonCodeQueryEngine is executed with user input. If this query engine generates and executes Python code, prompt injection can lead to arbitrary code execution. AI analysis will determine if the engine actually executes code."
+      remediation: "Never use PythonCodeQueryEngine with untrusted user input. If code execution is necessary, implement strict input validation, output sanitization, and code execution sandboxing. Consider using safer alternatives that don't execute generated code."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_python_code_engine.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"

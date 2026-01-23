@@ -1,0 +1,216 @@
+rules:
+  # ============================================================================
+  # LLM05: Supply Chain Vulnerabilities - Hugging Face Model Loading
+  # ============================================================================
+  # Detects supply chain vulnerabilities in Hugging Face model loading
+  # CVE-2025-14921, CVE-2025-14924, CVE-2025-14926: Pickle deserialization RCE
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules huggingface-llm05-pickle-deserialization \
+  #     --ai-analyze-rules huggingface-llm05-trust-remote-code \
+  #     --ai-analyze-rules huggingface-llm05-untrusted-model-source
+  #
+  # OWASP: LLM05
+  # CWE: CWE-494, CWE-502
+  # ============================================================================
+
+  - id: huggingface-llm05-pickle-deserialization
+    patterns:
+      - pattern-either:
+          # Model loading without safetensors (uses pickle by default)
+          - pattern: |
+              AutoModel.from_pretrained($MODEL)
+          - pattern: |
+              AutoTokenizer.from_pretrained($MODEL)
+          - pattern: |
+              AutoModelForCausalLM.from_pretrained($MODEL)
+          - pattern: |
+              AutoModelForSeq2SeqLM.from_pretrained($MODEL)
+          - pattern: |
+              pipeline(model=$MODEL, ...)
+          - pattern: |
+              $PIPELINE = pipeline(model=$MODEL)
+      - pattern-not-inside: |
+          AutoModel.from_pretrained($MODEL, use_safetensors=True, ...)
+      - pattern-not-inside: |
+          AutoModel.from_pretrained($MODEL, ..., use_safetensors=True)
+      - pattern-not-inside: |
+          pipeline(model=$MODEL, ..., use_safetensors=True)
+      - pattern-not-inside: |
+          pipeline(model=$MODEL, use_safetensors=True, ...)
+    message: "LLM05: Supply Chain - Model loading without safetensors format (pickle deserialization RCE risk) (CVE-2025-14921, CVE-2025-14924, CVE-2025-14926)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: supply-chain
+      owasp: "LLM05"
+      owasp-title: "Supply Chain Vulnerabilities"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM05.html"
+      cwe: ["CWE-494", "CWE-502"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/494.html", "https://cwe.mitre.org/data/definitions/502.html"]
+      tags: ["owasp", "llm05", "supply-chain", "pickle", "deserialization", "rce", "huggingface", "cve-2025-14921", "cve-2025-14924", "cve-2025-14926", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Model is loaded without explicitly using safetensors format. PyTorch uses pickle as the default serialization format, which allows arbitrary code execution during deserialization. Loading untrusted pickle files can result in RCE. CVE-2025-14921, CVE-2025-14924, CVE-2025-14926 (CVSS 8.8). Always use use_safetensors=True or ensure models are in safetensors format."
+      remediation: "Always use safetensors format for model loading. Set use_safetensors=True when loading models. Use pipeline(model=$MODEL, use_safetensors=True) or AutoModel.from_pretrained($MODEL, use_safetensors=True). Verify models are in safetensors format before loading. Never load pickle models from untrusted sources."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_pickle_deserialization.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://huggingface.co/docs/hub/en/security-pickle"
+        - "https://cwe.mitre.org/data/definitions/494.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: huggingface-llm05-trust-remote-code
+    patterns:
+      - pattern-either:
+          # trust_remote_code=True with potentially untrusted models
+          - pattern: |
+              AutoModel.from_pretrained($MODEL, trust_remote_code=True)
+          - pattern: |
+              AutoTokenizer.from_pretrained($MODEL, trust_remote_code=True)
+          - pattern: |
+              AutoModelForCausalLM.from_pretrained($MODEL, trust_remote_code=True)
+          - pattern: |
+              pipeline(model=$MODEL, trust_remote_code=True, ...)
+          - pattern: |
+              pipeline(model=$MODEL, ..., trust_remote_code=True)
+          - pattern: |
+              from_pretrained($MODEL, trust_remote_code=True)
+      - metavariable-regex:
+          metavariable: $MODEL
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_model|user_path|user_url|untrusted|external|third_party|\.get\(|\.post\()
+    message: "LLM05: Supply Chain - trust_remote_code=True with potentially untrusted model source"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: supply-chain
+      owasp: "LLM05"
+      owasp-title: "Supply Chain Vulnerabilities"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM05.html"
+      cwe: ["CWE-494", "CWE-502"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/494.html", "https://cwe.mitre.org/data/definitions/502.html"]
+      tags: ["owasp", "llm05", "supply-chain", "trust-remote-code", "code-injection", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "trust_remote_code=True is used with potentially untrusted model source. This parameter allows execution of custom modeling files from repositories, creating a code injection risk. If the model source is user-controlled or untrusted, this can lead to arbitrary code execution."
+      remediation: "Never use trust_remote_code=True with untrusted model sources. Always verify the content of modeling files before using this argument. Set a specific revision to protect against repository updates. Only use trust_remote_code=True with models from trusted sources. Consider using safetensors format instead."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_trust_remote_code.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://github.com/huggingface/transformers/blob/main/SECURITY.md"
+        - "https://cwe.mitre.org/data/definitions/494.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: huggingface-llm05-untrusted-model-source
+    mode: taint
+    pattern-sources:
+      # Untrusted model sources
+      - pattern: |
+          flask.request.args.get(...)
+      - pattern: |
+          request.GET.get(...)
+      - pattern: |
+          request.POST.get(...)
+      - pattern: |
+          input(...)
+      - pattern: |
+          sys.argv[...]
+      - pattern: |
+          os.getenv(...)
+      - pattern: |
+          requests.get($URL).text
+    pattern-sinks:
+      - pattern: |
+          AutoModel.from_pretrained($MODEL_SOURCE)
+      - pattern: |
+          AutoTokenizer.from_pretrained($MODEL_SOURCE)
+      - pattern: |
+          AutoModelForCausalLM.from_pretrained($MODEL_SOURCE)
+      - pattern: |
+          pipeline(model=$MODEL_SOURCE, ...)
+      - pattern: |
+          from_pretrained($MODEL_SOURCE)
+    message: "LLM05: Supply Chain - Model loaded from untrusted source (user input, external URL, or environment variable)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: supply-chain
+      owasp: "LLM05"
+      owasp-title: "Supply Chain Vulnerabilities"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM05.html"
+      cwe: ["CWE-494", "CWE-502"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/494.html", "https://cwe.mitre.org/data/definitions/502.html"]
+      tags: ["owasp", "llm05", "supply-chain", "untrusted-model", "huggingface", "taint", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Model is loaded from an untrusted source (user input, external URL, environment variable). Loading models from untrusted sources can lead to supply chain attacks, malicious models, and arbitrary code execution (especially with pickle format)."
+      remediation: "Never load models from untrusted sources. Use allowlisted model identifiers from trusted repositories. Validate and sanitize model paths/URLs. Use signed commits for verification. Prefer models from official Hugging Face Hub with verified signatures."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_untrusted_model.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://huggingface.co/docs/hub/en/security-pickle"
+        - "https://cwe.mitre.org/data/definitions/494.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: huggingface-llm05-torch-load-pickle
+    patterns:
+      - pattern-either:
+          # Direct torch.load with potentially untrusted files
+          - pattern: |
+              torch.load($MODEL_PATH)
+          - pattern: |
+              torch.load($MODEL_PATH, ...)
+          - pattern: |
+              pickle.load($MODEL_FILE)
+          - pattern: |
+              pickle.loads($MODEL_DATA)
+    message: "LLM05: Supply Chain - Direct torch.load or pickle.load with potentially untrusted model files"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: supply-chain
+      owasp: "LLM05"
+      owasp-title: "Supply Chain Vulnerabilities"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM05.html"
+      cwe: ["CWE-494", "CWE-502"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/494.html", "https://cwe.mitre.org/data/definitions/502.html"]
+      tags: ["owasp", "llm05", "supply-chain", "pickle", "torch", "deserialization", "rce", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "pytorch", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Direct torch.load() or pickle.load() is used to load model files. These functions deserialize pickle format, which allows arbitrary code execution during deserialization. Loading untrusted pickle files can result in RCE."
+      remediation: "Never use torch.load() or pickle.load() with untrusted files. Use Hugging Face transformers library with safetensors format instead. If pickle loading is necessary, only load files from trusted sources and verify file integrity. Consider using safetensors format for model serialization."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_torch_load.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://huggingface.co/docs/hub/en/security-pickle"
+        - "https://cwe.mitre.org/data/definitions/494.html"
+    paths:
+      include:
+        - "*.py"

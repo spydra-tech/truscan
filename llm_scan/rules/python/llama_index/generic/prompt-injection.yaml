@@ -1,0 +1,207 @@
+rules:
+  # ============================================================================
+  # LLM01: Prompt Injection - LlamaIndex Query Engines
+  # ============================================================================
+  # Detects prompt injection vulnerabilities in LlamaIndex query engines
+  # User input in query engines can lead to indirect prompt injection
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules llamaindex-llm01-query-engine-user-input \
+  #     --ai-analyze-rules llamaindex-llm01-vector-store-user-input \
+  #     --ai-analyze-rules llamaindex-llm01-query-results-to-prompt
+  #
+  # OWASP: LLM01
+  # CWE: CWE-79, CWE-94
+  # ============================================================================
+
+  - id: llamaindex-llm01-query-engine-user-input
+    patterns:
+      - pattern-either:
+          # Query engine with user input
+          - pattern: |
+              $QUERY_ENGINE.query($USER_INPUT)
+          - pattern: |
+              $QUERY_ENGINE.retrieve($USER_INPUT)
+          - pattern: |
+              $INDEX.as_query_engine().query($USER_INPUT)
+          - pattern: |
+              $INDEX.as_query_engine().retrieve($USER_INPUT)
+          - pattern: |
+              $QUERY_ENGINE = $INDEX.as_query_engine()
+              ...
+              $QUERY_ENGINE.query($USER_INPUT)
+          - pattern: |
+              RetrieverQueryEngine(...).query($USER_INPUT)
+          - pattern: |
+              $RETRIEVER_ENGINE = RetrieverQueryEngine(...)
+              ...
+              $RETRIEVER_ENGINE.query($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query|question)
+    message: "LLM01: Prompt Injection - Query engine execution with user input"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "query-engine", "llamaindex", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - depends on how results are used
+      impact: "high"
+      likelihood: "medium"  # AI will assess based on result usage
+      description: "Query engine is executed with user input. If query results are included in prompts or used unsafely, this can enable indirect prompt injection. AI analysis will determine if the query results are used unsafely in prompts or other contexts."
+      remediation: "Validate and sanitize user queries before query engine execution. Sanitize query results before including in prompts. Use delimiters to separate retrieved content from instructions. Implement content filtering for query results."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm01-vector-store-user-input
+    patterns:
+      - pattern-either:
+          # Vector store query with user input
+          - pattern: |
+              $VECTOR_STORE.query($USER_INPUT)
+          - pattern: |
+              $VECTOR_STORE.retrieve($USER_INPUT)
+          - pattern: |
+              $VECTOR_STORE.similarity_search($USER_INPUT)
+          - pattern: |
+              $VECTOR_STORE.similarity_search_with_score($USER_INPUT)
+          - pattern: |
+              VectorStoreIndex.from_vector_store($VECTOR_STORE).as_query_engine().query($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query|question)
+    message: "LLM01: Prompt Injection - Vector store query with user input"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Vector Store)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "vector-store", "llamaindex", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - depends on how results are used
+      impact: "high"
+      likelihood: "medium"  # AI will assess based on result usage
+      description: "Vector store is queried with user input. If the retrieved documents are injected into prompts without sanitization, this can enable indirect prompt injection. AI analysis will determine if the search results are used unsafely in prompts."
+      remediation: "Validate and sanitize user queries before vector search. Sanitize retrieved document content before including in prompts. Use delimiters to separate retrieved content from instructions. Implement content filtering for retrieved documents."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm01-query-results-to-prompt
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          $QUERY_ENGINE.query(...)
+      - pattern: |
+          $QUERY_ENGINE.retrieve(...)
+      - pattern: |
+          $INDEX.as_query_engine().query(...)
+      - pattern: |
+          $VECTOR_STORE.query(...)
+      - pattern: |
+          $VECTOR_STORE.retrieve(...)
+    pattern-sinks:
+      - pattern: |
+          $LLM.chat(...)
+      - pattern: |
+          $LLM.complete(...)
+      - pattern: |
+          $LLM.stream_chat(...)
+      - pattern: |
+          openai.ChatCompletion.create(...)
+      - pattern: |
+          $CLIENT.chat.completions.create(...)
+      - pattern: |
+          f"...{$QUERY_RESULT}..."
+      - pattern: |
+          "..." + $QUERY_RESULT + "..."
+    message: "LLM01: Indirect Prompt Injection - Query engine results flow into LLM prompts without sanitization"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Indirect)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "indirect-injection", "query-engine", "llamaindex", "taint", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - depends on sanitization
+      impact: "high"
+      likelihood: "medium"  # AI will assess if sanitization is present
+      description: "Query engine results flow into LLM prompts or API calls. If the vector store or index contains poisoned or malicious content, this enables indirect prompt injection. AI analysis will determine if the retrieved content is properly sanitized before use in prompts."
+      remediation: "Sanitize all query engine results before including in prompts. Use delimiters to separate retrieved content from instructions. Implement content filtering and validation for query results. Treat all retrieved content as potentially malicious."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm01-service-context-user-input
+    patterns:
+      - pattern-either:
+          # Service context with user-controlled LLM
+          - pattern: |
+              ServiceContext.from_defaults(llm=$USER_LLM)
+          - pattern: |
+              $SERVICE_CONTEXT = ServiceContext.from_defaults(llm=$USER_LLM)
+          - pattern: |
+              ServiceContext.from_defaults(llm=$USER_LLM, ...)
+      - metavariable-regex:
+          metavariable: $USER_LLM
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_llm|user_model|user_provider|llm_config|model_config)
+    message: "LLM01: Prompt Injection - Service context with user-controlled LLM configuration"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Service Context)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "service-context", "llamaindex", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - depends on LLM usage
+      impact: "high"
+      likelihood: "medium"  # AI will assess if LLM is used with untrusted data
+      description: "Service context is created with user-controlled LLM configuration. If the LLM is used with untrusted data, this can enable prompt injection or model substitution attacks. AI analysis will determine if the LLM is used unsafely."
+      remediation: "Never allow user-controlled LLM configuration. Use trusted, validated LLM instances only. Implement strict access controls for service context configuration. Validate all LLM configuration parameters."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_service_context.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"

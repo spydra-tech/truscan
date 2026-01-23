@@ -1,0 +1,226 @@
+rules:
+  # ============================================================================
+  # LLM02: Code Injection - LangChain PALChain (CVE-2023-46229)
+  # ============================================================================
+  # Detects PALChain code execution vulnerabilities
+  # CVE-2023-46229: PALChain allows arbitrary code execution via prompt injection
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules langchain-llm02-palchain-code-execution \
+  #     --ai-analyze-rules langchain-llm02-palchain-to-eval
+  #
+  # OWASP: LLM02
+  # CWE: CWE-94
+  # ============================================================================
+
+  - id: langchain-llm02-palchain-code-execution
+    patterns:
+      - pattern-either:
+          # PALChain with user input
+          - pattern: |
+              PALChain.from_math_prompt(llm=$LLM).run($USER_INPUT)
+          - pattern: |
+              $PAL_CHAIN = PALChain.from_math_prompt(...)
+              ...
+              $PAL_CHAIN.run($USER_INPUT)
+          - pattern: |
+              $PAL_CHAIN = PALChain(...)
+              ...
+              $PAL_CHAIN.run($USER_INPUT)
+          - pattern: |
+              PALChain(...).invoke({"question": $USER_INPUT})
+          - pattern: |
+              $PAL_CHAIN.invoke({"question": $USER_INPUT})
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_question|question)
+    message: "LLM02: Code Injection - PALChain execution with user input allows arbitrary code execution (CVE-2023-46229)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (PALChain)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "palchain", "langchain", "cve-2023-46229", "eval", "exec", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "PALChain (Program-Aided Language models) is executed with user input. PALChain generates Python code that gets executed, and prompt injection can lead to arbitrary code execution. CVE-2023-46229."
+      remediation: "Never use PALChain with untrusted user input. If PALChain is necessary, implement strict input validation, output sanitization, and code execution sandboxing. Consider using safer alternatives that don't execute generated code. Restrict PALChain to trusted, validated inputs only."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_palchain_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://github.com/langchain-ai/langchain/security/advisories/GHSA-6qv9-48xg-fc7f"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm02-palchain-to-eval
+    patterns:
+      - pattern-either:
+          # PALChain output to eval/exec/compile
+          - pattern: |
+              $RESPONSE = PALChain(...).run(...)
+              ...
+              $CODE = $RESPONSE
+              ...
+              eval($CODE)
+          - pattern: |
+              $RESPONSE = PALChain(...).run(...)
+              ...
+              $CODE = $RESPONSE
+              ...
+              exec($CODE)
+          - pattern: |
+              $RESPONSE = PALChain(...).run(...)
+              ...
+              $CODE = $RESPONSE
+              ...
+              compile($CODE, ...)
+          - pattern: |
+              $RESPONSE = $PAL_CHAIN.run(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = $PAL_CHAIN.run(...)
+              ...
+              exec($RESPONSE)
+          - pattern: |
+              $RESPONSE = $PAL_CHAIN.run(...)
+              ...
+              compile($RESPONSE, ...)
+    message: "LLM02: Code Injection - PALChain output passed to eval/exec/compile (CRITICAL)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "palchain", "eval", "exec", "compile", "langchain", "critical", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "PALChain output is passed directly to eval(), exec(), or compile() functions. PALChain already executes code internally, and passing its output to these functions creates a double code execution risk, making the application extremely vulnerable to code injection attacks."
+      remediation: "NEVER execute PALChain output as code. PALChain already executes code internally. If you need to process PALChain output, use safe parsing methods, validation, and structured output formats. Remove any eval/exec/compile calls on PALChain output."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_palchain_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm02-python-repl-chain
+    patterns:
+      - pattern-either:
+          # PythonREPLChain with user input
+          - pattern: |
+              PythonREPLChain(...).run($USER_INPUT)
+          - pattern: |
+              $REPL_CHAIN = PythonREPLChain(...)
+              ...
+              $REPL_CHAIN.run($USER_INPUT)
+          - pattern: |
+              PythonREPLChain(...).invoke({"query": $USER_INPUT})
+          - pattern: |
+              $REPL_CHAIN.invoke({"query": $USER_INPUT})
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query)
+    message: "LLM02: Code Injection - PythonREPLChain execution with user input allows arbitrary Python code execution"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (PythonREPLChain)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "python-repl", "langchain", "eval", "exec", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "PythonREPLChain is executed with user input. PythonREPLChain executes Python code in a REPL, and user input can lead to arbitrary code execution, file system access, and system compromise."
+      remediation: "Never use PythonREPLChain with untrusted user input. If code execution is necessary, implement strict sandboxing, input validation, and output sanitization. Consider using safer alternatives or restricted execution environments."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_python_repl.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm02-chain-output-to-eval
+    patterns:
+      - pattern-either:
+          # Chain output to eval/exec/compile
+          - pattern: |
+              $RESPONSE = LLMChain(...).run(...)
+              ...
+              $CODE = $RESPONSE
+              ...
+              eval($CODE)
+          - pattern: |
+              $RESPONSE = $CHAIN.run(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = $CHAIN.run(...)
+              ...
+              exec($RESPONSE)
+          - pattern: |
+              $RESPONSE = $CHAIN.run(...)
+              ...
+              compile($RESPONSE, ...)
+          - pattern: |
+              $RESPONSE = $CHAIN.invoke(...)
+              ...
+              eval($RESPONSE)
+    message: "LLM02: Code Injection - LangChain output passed to eval/exec/compile"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "eval", "exec", "compile", "langchain", "chain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LangChain chain output is passed directly to eval(), exec(), or compile() functions without validation. LLM output can contain malicious code, and executing it leads to arbitrary code execution."
+      remediation: "NEVER execute LLM output as code. Use safe parsing, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_code_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"

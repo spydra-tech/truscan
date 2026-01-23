@@ -1,0 +1,114 @@
+rules:
+  # ============================================================================
+  # LLM02: Insecure Output Handling - Query Engine Results
+  # ============================================================================
+  # Detects vulnerabilities where query engine output is used unsafely
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules llamaindex-llm02-query-engine-to-command \
+  #     --ai-analyze-rules llamaindex-llm02-query-engine-to-file-ops
+  #
+  # OWASP: LLM02
+  # CWE: CWE-78, CWE-22
+  # ============================================================================
+
+  - id: llamaindex-llm02-query-engine-to-command
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          $QUERY_ENGINE.query(...)
+      - pattern: |
+          $QUERY_ENGINE.retrieve(...)
+      - pattern: |
+          $INDEX.as_query_engine().query(...)
+      - pattern: |
+          $INDEX.query(...)
+    pattern-sinks:
+      - pattern: |
+          subprocess.run($QUERY_OUTPUT, ...)
+      - pattern: |
+          subprocess.call($QUERY_OUTPUT, ...)
+      - pattern: |
+          subprocess.Popen($QUERY_OUTPUT, ...)
+      - pattern: |
+          os.system($QUERY_OUTPUT)
+      - pattern: |
+          os.popen($QUERY_OUTPUT)
+    message: "LLM02: Command Injection - Query engine output passed to command execution functions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (Command Injection)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm02", "command-injection", "query-engine", "llamaindex", "taint", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Query engine output flows into command execution functions (subprocess, os.system). If the query engine generates commands or command-like output, this can lead to arbitrary command execution."
+      remediation: "NEVER execute query engine output as commands. Use safe parsing methods, validation, and structured output formats. If command execution is needed, use allowlists, parameterized commands, or sandboxed execution environments."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_command_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm02-query-engine-to-file-ops
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          $QUERY_ENGINE.query(...)
+      - pattern: |
+          $QUERY_ENGINE.retrieve(...)
+      - pattern: |
+          $INDEX.as_query_engine().query(...)
+    pattern-sinks:
+      - pattern: |
+          open($QUERY_OUTPUT, ...)
+      - pattern: |
+          os.remove($QUERY_OUTPUT)
+      - pattern: |
+          os.unlink($QUERY_OUTPUT)
+      - pattern: |
+          shutil.copy($QUERY_OUTPUT, ...)
+      - pattern: |
+          shutil.move($QUERY_OUTPUT, ...)
+      - pattern: |
+          Path($QUERY_OUTPUT).write_text(...)
+    message: "LLM02: Path Traversal - Query engine output used in file operations without validation"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: path-traversal
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (Path Traversal)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-22"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/22.html"]
+      tags: ["owasp", "llm02", "path-traversal", "query-engine", "llamaindex", "taint", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - depends on path validation
+      impact: "high"
+      likelihood: "medium"  # AI will assess if path validation is present
+      description: "Query engine output is used in file operations. If the output contains file paths, this can lead to path traversal attacks. AI analysis will determine if path validation is present."
+      remediation: "Validate and sanitize all file paths before use. Restrict file operations to specific directories. Use os.path.abspath() and os.path.join() for safe path construction. Implement path allowlisting."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_path_traversal.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/22.html"
+    paths:
+      include:
+        - "*.py"

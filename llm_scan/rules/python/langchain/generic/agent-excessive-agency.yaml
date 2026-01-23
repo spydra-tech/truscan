@@ -1,0 +1,242 @@
+rules:
+  # ============================================================================
+  # LLM08: Excessive Agency - LangChain Agents
+  # ============================================================================
+  # Detects unrestricted agent tool execution vulnerabilities
+  # Agents with dangerous tools (PythonREPL, Shell, etc.) can execute arbitrary code/commands
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules langchain-llm08-agent-dangerous-tools \
+  #     --ai-analyze-rules langchain-llm08-agent-user-input
+  #
+  # OWASP: LLM08
+  # CWE: CWE-94, CWE-78
+  # ============================================================================
+
+  - id: langchain-llm08-agent-dangerous-tools
+    patterns:
+      - pattern-either:
+          # Agent with PythonREPLTool
+          - pattern: |
+              initialize_agent(tools=[..., PythonREPLTool(), ...], ...)
+          - pattern: |
+              initialize_agent(tools=[..., $PYTHON_REPL, ...], ...)
+          - pattern: |
+              AgentExecutor(agent=..., tools=[..., PythonREPLTool(), ...], ...)
+          - pattern: |
+              AgentExecutor(agent=..., tools=[..., $PYTHON_REPL, ...], ...)
+          # Agent with ShellTool
+          - pattern: |
+              initialize_agent(tools=[..., ShellTool(), ...], ...)
+          - pattern: |
+              initialize_agent(tools=[..., $SHELL_TOOL, ...], ...)
+          - pattern: |
+              AgentExecutor(agent=..., tools=[..., ShellTool(), ...], ...)
+          - pattern: |
+              AgentExecutor(agent=..., tools=[..., $SHELL_TOOL, ...], ...)
+          # Agent with both dangerous tools
+          - pattern: |
+              initialize_agent(tools=[..., PythonREPLTool(), ..., ShellTool(), ...], ...)
+          - pattern: |
+              AgentExecutor(agent=..., tools=[..., PythonREPLTool(), ..., ShellTool(), ...], ...)
+      - metavariable-regex:
+          metavariable: $PYTHON_REPL
+          regex: (PythonREPLTool|python_repl|PythonREPL)
+      - metavariable-regex:
+          metavariable: $SHELL_TOOL
+          regex: (ShellTool|shell_tool|Shell)
+    message: "LLM08: Excessive Agency - Agent initialized with dangerous tools (PythonREPLTool/ShellTool) allowing arbitrary code/command execution"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-agency
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-94", "CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html", "https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "agent", "python-repl", "shell-tool", "langchain", "code-execution", "command-execution", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LangChain agent is initialized with dangerous tools (PythonREPLTool, ShellTool) that allow arbitrary code and command execution. If the agent receives user input, attackers can execute arbitrary Python code or shell commands, leading to complete system compromise."
+      remediation: "Never use PythonREPLTool or ShellTool in agents that process user input. If code/command execution is necessary, implement strict sandboxing, input validation, output sanitization, and tool restrictions. Use whitelisted, safe tools only. Consider using restricted execution environments."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_agent_excessive_agency.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm08-agent-user-input
+    patterns:
+      - pattern-either:
+          # Agent execution with user input
+          - pattern: |
+              $AGENT = initialize_agent(...)
+              ...
+              $AGENT.run($USER_INPUT)
+          - pattern: |
+              $AGENT_EXECUTOR = AgentExecutor(...)
+              ...
+              $AGENT_EXECUTOR.run($USER_INPUT)
+          - pattern: |
+              $AGENT.invoke({"input": $USER_INPUT})
+          - pattern: |
+              $AGENT_EXECUTOR.invoke({"input": $USER_INPUT})
+          - pattern: |
+              initialize_agent(...).run($USER_INPUT)
+          - pattern: |
+              AgentExecutor(...).run($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query)
+    message: "LLM08: Excessive Agency - Agent execution with user input (potential code/command execution risk)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-agency
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-94", "CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html", "https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "agent", "langchain", "user-input", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on agent tools
+      impact: "critical"
+      likelihood: "medium"  # AI will assess based on agent configuration
+      description: "LangChain agent is executed with user input. If the agent has access to dangerous tools (PythonREPLTool, ShellTool, file operations, etc.), this can lead to arbitrary code/command execution. AI analysis will determine if the agent configuration is vulnerable based on available tools."
+      remediation: "Validate and sanitize all user input before passing to agents. Review agent tool configuration and remove dangerous tools (PythonREPLTool, ShellTool). Implement tool restrictions, input validation, and output sanitization. Use whitelisted, safe tools only."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_agent_user_input.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm08-agent-unrestricted-tools
+    patterns:
+      - pattern-either:
+          # Agent with many tools (potential excessive agency)
+          - pattern: |
+              initialize_agent(tools=[$TOOL1, $TOOL2, $TOOL3, $TOOL4, $TOOL5, ...], ...)
+          - pattern: |
+              AgentExecutor(agent=..., tools=[$TOOL1, $TOOL2, $TOOL3, $TOOL4, $TOOL5, ...], ...)
+      - pattern-not-inside: |
+          # Restricted tools only
+          initialize_agent(tools=[$SAFE_TOOL], ...)
+    message: "LLM08: Excessive Agency - Agent initialized with many tools (potential excessive permissions)"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-agency
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-94", "CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html", "https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "agent", "langchain", "multiple-tools", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on which tools
+      impact: "high"
+      likelihood: "medium"  # AI will assess based on tool types
+      description: "LangChain agent is initialized with many tools. This may indicate excessive agency if the tools include dangerous operations (code execution, file system, network, etc.). AI analysis will determine if the tool combination is risky."
+      remediation: "Review agent tool configuration. Use principle of least privilege - only include tools necessary for the agent's intended function. Remove dangerous tools (code execution, file system, network operations) unless absolutely necessary and properly sandboxed."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_agent_tools.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm08-agent-tool-file-operations
+    patterns:
+      - pattern-either:
+          # Agent with file operation tools
+          - pattern: |
+              initialize_agent(tools=[..., $FILE_TOOL, ...], ...)
+          - pattern: |
+              AgentExecutor(agent=..., tools=[..., $FILE_TOOL, ...], ...)
+      - metavariable-regex:
+          metavariable: $FILE_TOOL
+          regex: (FileManagementTool|file_tool|FileTool|ReadFileTool|WriteFileTool|ListDirectoryTool)
+    message: "LLM08: Excessive Agency - Agent with file operation tools (potential file system access)"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-agency
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-73"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/73.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "agent", "file-operations", "langchain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on restrictions
+      impact: "high"
+      likelihood: "medium"  # AI will assess based on file operation scope
+      description: "LangChain agent has access to file operation tools. If the agent processes user input, this can lead to unauthorized file access, data exfiltration, or file system manipulation. AI analysis will determine if file operations are properly restricted."
+      remediation: "Restrict file operation tools to specific directories. Implement file access controls, path validation, and output sanitization. Use sandboxed file operations. Review agent tool permissions and restrict to necessary operations only."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_agent_file_ops.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm08-agent-tool-network-operations
+    patterns:
+      - pattern-either:
+          # Agent with network operation tools
+          - pattern: |
+              initialize_agent(tools=[..., $NETWORK_TOOL, ...], ...)
+          - pattern: |
+              AgentExecutor(agent=..., tools=[..., $NETWORK_TOOL, ...], ...)
+      - metavariable-regex:
+          metavariable: $NETWORK_TOOL
+          regex: (RequestsTool|requests_tool|HTTPTool|WebSearchTool|web_search|UrlTool)
+    message: "LLM08: Excessive Agency - Agent with network operation tools (potential SSRF/data exfiltration risk)"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-agency
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-918"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/918.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "agent", "network", "ssrf", "langchain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on URL restrictions
+      impact: "high"
+      likelihood: "medium"  # AI will assess based on URL validation
+      description: "LangChain agent has access to network operation tools (HTTP requests, web search, etc.). If the agent processes user input, this can lead to SSRF attacks, data exfiltration, or unauthorized network access. AI analysis will determine if network operations are properly restricted."
+      remediation: "Implement URL allowlisting for network tools. Validate and restrict network destinations. Use network proxies or firewalls to control outbound connections. Review agent tool permissions and restrict to necessary network operations only."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_agent_network.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"

@@ -1,0 +1,108 @@
+rules:
+  # ============================================================================
+  # LLM01: Memory Injection - LangChain Conversation Memory
+  # ============================================================================
+  # Detects vulnerabilities where user input stored in conversation memory
+  # can be injected into prompts, enabling prompt injection attacks
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules langchain-llm01-memory-user-input \
+  #     --ai-analyze-rules langchain-llm01-memory-to-prompt
+  #
+  # OWASP: LLM01
+  # CWE: CWE-79, CWE-94
+  # ============================================================================
+
+  - id: langchain-llm01-memory-user-input
+    patterns:
+      - pattern-either:
+          # User input saved to memory
+          - pattern: |
+              $MEMORY.save_context({"input": $USER_INPUT}, ...)
+          - pattern: |
+              $MEMORY.chat_memory.add_user_message($USER_INPUT)
+          - pattern: |
+              $MEMORY.chat_memory.add_ai_message($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content)
+    message: "LLM01: Potential Prompt Injection - User input stored in conversation memory"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Memory)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "memory", "langchain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on how memory is used
+      impact: "high"
+      likelihood: "medium"  # AI will assess if memory content is used in prompts
+      description: "User input is stored in conversation memory. If memory content is later included in prompts without sanitization, this can enable prompt injection attacks across conversation turns. AI analysis will determine if memory content is used unsafely in prompts."
+      remediation: "Sanitize user input before storing in memory. Sanitize memory content before including in prompts. Use delimiters to separate memory content from instructions. Implement content filtering for memory content."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_memory_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm01-memory-to-prompt
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          $MEMORY.save_context(...)
+      - pattern: |
+          $MEMORY.chat_memory.add_user_message(...)
+      - pattern: |
+          $MEMORY.chat_memory.add_ai_message(...)
+      - pattern: |
+          $MEMORY.buffer
+      - pattern: |
+          $MEMORY.chat_memory.messages
+    pattern-sinks:
+      - pattern: |
+          ChatPromptTemplate.from_template(...)
+      - pattern: |
+          PromptTemplate.from_template(...)
+      - pattern: |
+          f"...{$MEMORY_CONTENT}..."
+      - pattern: |
+          "..." + $MEMORY_CONTENT + "..."
+      - pattern: |
+          $CHAIN.run(...)
+      - pattern: |
+          $CHAIN.invoke(...)
+    message: "LLM01: Prompt Injection - Memory content flows into prompts without sanitization"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Memory)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "memory", "langchain", "taint", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on sanitization
+      impact: "high"
+      likelihood: "medium"  # AI will assess if sanitization is present
+      description: "Conversation memory content flows into LangChain prompts or chains. If memory contains user input from previous turns, this can enable prompt injection attacks. AI analysis will determine if memory content is properly sanitized before use in prompts."
+      remediation: "Sanitize all memory content before including in prompts. Use delimiters to separate memory content from instructions. Implement content filtering for memory. Consider clearing or filtering memory periodically."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_memory_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"

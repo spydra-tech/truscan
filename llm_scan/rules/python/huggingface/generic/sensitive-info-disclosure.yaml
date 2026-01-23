@@ -1,0 +1,123 @@
+rules:
+  # ============================================================================
+  # LLM06: Sensitive Information Disclosure
+  # ============================================================================
+  # Detects vulnerabilities where pipeline outputs or model responses
+  # are logged or exposed without sanitization
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules huggingface-llm06-pipeline-logging \
+  #     --ai-analyze-rules huggingface-llm06-model-response-logging
+  #
+  # OWASP: LLM06
+  # CWE: CWE-200, CWE-532
+  # ============================================================================
+
+  - id: huggingface-llm06-pipeline-logging
+    patterns:
+      - pattern-either:
+          # Pipeline output logging
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              logger.info($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              logger.debug($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              logger.warning($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              logger.error($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              print($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              sys.stdout.write($RESPONSE)
+          - pattern: |
+              $RESPONSE = $PIPELINE(...)
+              ...
+              logger.info($RESPONSE)
+    message: "LLM06: Sensitive Information Disclosure - Pipeline output logged without sanitization"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: data-exposure
+      owasp: "LLM06"
+      owasp-title: "Sensitive Information Disclosure"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM06.html"
+      cwe: ["CWE-200", "CWE-532"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/200.html", "https://cwe.mitre.org/data/definitions/532.html"]
+      tags: ["owasp", "llm06", "sensitive-info-disclosure", "logging", "pipeline", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "medium"  # Medium confidence - depends on what's logged
+      impact: "medium"
+      likelihood: "medium"  # AI will assess if sensitive data is present
+      description: "Pipeline output is logged without sanitization. If pipeline responses contain sensitive data (PII, secrets, API keys), this can lead to information disclosure through logs. AI analysis will determine if sensitive data is likely present in the logged content."
+      remediation: "Sanitize pipeline outputs before logging. Remove or redact sensitive information (PII, secrets, API keys). Use structured logging with field filtering. Implement log access controls and encryption."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_sensitive_info.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/200.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: huggingface-llm06-model-response-logging
+    patterns:
+      - pattern-either:
+          # Model response logging
+          - pattern: |
+              $OUTPUT = $MODEL(...)
+              ...
+              logger.info($OUTPUT)
+          - pattern: |
+              $OUTPUT = $MODEL.generate(...)
+              ...
+              logger.info($OUTPUT)
+          - pattern: |
+              $OUTPUT = $MODEL(**$INPUTS)
+              ...
+              logger.info($OUTPUT)
+          - pattern: |
+              $OUTPUT = $MODEL(...)
+              ...
+              print($OUTPUT)
+    message: "LLM06: Sensitive Information Disclosure - Model response logged without sanitization"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: data-exposure
+      owasp: "LLM06"
+      owasp-title: "Sensitive Information Disclosure"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM06.html"
+      cwe: ["CWE-200", "CWE-532"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/200.html", "https://cwe.mitre.org/data/definitions/532.html"]
+      tags: ["owasp", "llm06", "sensitive-info-disclosure", "logging", "model", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "medium"  # Medium confidence - depends on what's logged
+      impact: "medium"
+      likelihood: "medium"  # AI will assess if sensitive data is present
+      description: "Model response is logged without sanitization. If model outputs contain sensitive data (PII, secrets, API keys), this can lead to information disclosure through logs. AI analysis will determine if sensitive data is likely present."
+      remediation: "Sanitize model responses before logging. Remove or redact sensitive information (PII, secrets, API keys). Use structured logging with field filtering. Implement log access controls and encryption."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_sensitive_info.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/200.html"
+    paths:
+      include:
+        - "*.py"

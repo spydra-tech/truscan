@@ -1,0 +1,342 @@
+rules:
+  # ============================================================================
+  # LLM08: Excessive Agency (Anthropic Generic)
+  # ============================================================================
+  # Detects LLM output used for dangerous operations without proper restrictions
+  # OWASP: LLM08
+  # CWE: CWE-250, CWE-284
+  # ============================================================================
+  # Note: Only high-confidence rules are included. Operations like code execution
+  # and command execution are already covered by code-injection and command-injection rules.
+
+  - id: anthropic-excessive-agency-file-deletion
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+      - pattern-inside: |
+          $FILEPATH = $RESPONSE.content[0].text
+          ...
+      - pattern-either:
+          # File deletion operations
+          - pattern: os.remove($FILEPATH)
+          - pattern: os.unlink($FILEPATH)
+          - pattern: |
+              os.remove($FILEPATH, ...)
+          - pattern: |
+              os.unlink($FILEPATH, ...)
+    message: "LLM08: Excessive Agency - Anthropic output used for file deletion without restrictions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-privileges
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-250", "CWE-284"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/250.html", "https://cwe.mitre.org/data/definitions/284.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "file-deletion", "privilege-escalation", "llm", "ai-security", "anthropic"]
+      technology: ["python", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Anthropic output is used directly for file deletion operations (os.remove, os.unlink) without path validation, whitelisting, or authorization checks. This grants the LLM excessive agency to delete arbitrary files."
+      remediation: "Never allow LLM output to directly control file deletion. Implement strict path validation, whitelist allowed directories, require explicit user confirmation for deletions, and use read-only operations when possible."
+      examples:
+        vulnerable: "samples/llm08_excessive_agency.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/250.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: anthropic-excessive-agency-directory-deletion
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+      - pattern-inside: |
+          $DIRPATH = $RESPONSE.content[0].text
+          ...
+      - pattern-either:
+          # Directory deletion operations
+          - pattern: shutil.rmtree($DIRPATH)
+          - pattern: |
+              shutil.rmtree($DIRPATH, ...)
+          - pattern: os.rmdir($DIRPATH)
+          - pattern: |
+              os.rmdir($DIRPATH, ...)
+    message: "LLM08: Excessive Agency - Anthropic output used for directory deletion without restrictions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-privileges
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-250", "CWE-284"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/250.html", "https://cwe.mitre.org/data/definitions/284.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "directory-deletion", "privilege-escalation", "llm", "ai-security", "anthropic"]
+      technology: ["python", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Anthropic output is used directly for directory deletion operations (shutil.rmtree, os.rmdir) without path validation or authorization checks. This grants the LLM excessive agency to delete entire directory trees."
+      remediation: "Never allow LLM output to directly control directory deletion. Implement strict path validation, whitelist allowed directories, require explicit user confirmation, and use read-only operations when possible."
+      examples:
+        vulnerable: "samples/llm08_excessive_agency.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/250.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: anthropic-excessive-agency-database-write
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+      - pattern-inside: |
+          $QUERY = $RESPONSE.content[0].text
+          ...
+      - pattern-either:
+          # Database execution methods
+          - pattern: $DB.execute($QUERY)
+          - pattern: $CURSOR.execute($QUERY)
+          - pattern: $CONNECTION.execute($QUERY)
+          - pattern: $SESSION.execute($QUERY)
+          - pattern: $DB.executescript($QUERY)
+          - pattern: $CURSOR.executescript($QUERY)
+      - metavariable-regex:
+          metavariable: $QUERY
+          regex: (?i)(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE)
+    message: "LLM08: Excessive Agency - Anthropic output used for database write operations without restrictions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-privileges
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-250", "CWE-284", "CWE-89"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/250.html", "https://cwe.mitre.org/data/definitions/284.html", "https://cwe.mitre.org/data/definitions/89.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "database-write", "privilege-escalation", "llm", "ai-security", "anthropic"]
+      technology: ["python", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Anthropic output is used directly for database write operations (INSERT, UPDATE, DELETE, DROP, etc.) without read-only restrictions or authorization checks. This grants the LLM excessive agency to modify or destroy database data."
+      remediation: "Use read-only database connections for LLM operations. If write operations are necessary, implement strict query validation, use parameterized queries, require explicit user confirmation, and limit to specific whitelisted operations."
+      examples:
+        vulnerable: "samples/llm08_excessive_agency.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/250.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: anthropic-excessive-agency-system-config-write
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+              ...
+              $CONFIG = $RESPONSE.content[0].text
+              ...
+          - pattern-inside: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+              ...
+              $CONFIG = $RESPONSE.content[0].text
+              ...
+          - pattern-inside: |
+              $RESPONSE = $CLIENT.messages.create(...)
+              ...
+              $CONFIG = $RESPONSE.content[0].text
+              ...
+      - pattern-either:
+          # System configuration file writes
+          - pattern: |
+              open($FILEPATH, "w").write($CONFIG)
+          - pattern: |
+              open($FILEPATH, "wb").write($CONFIG)
+          - pattern: |
+              with open($FILEPATH, "w") as $VAR:
+                $VAR.write($CONFIG)
+          - pattern: |
+              with open($FILEPATH, "wb") as $VAR:
+                $VAR.write($CONFIG)
+          - pattern: |
+              $FILE = open($FILEPATH, "w")
+              ...
+              $FILE.write($CONFIG)
+      - metavariable-regex:
+          metavariable: $FILEPATH
+          regex: (/etc/|/sys/|/proc/|/boot/|/usr/local/|/var/lib/|/root/|config\.py|settings\.py|\.env|\.config)
+    message: "LLM08: Excessive Agency - Anthropic output used to write system configuration files"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-privileges
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-250", "CWE-284"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/250.html", "https://cwe.mitre.org/data/definitions/284.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "config-modification", "privilege-escalation", "llm", "ai-security", "anthropic"]
+      technology: ["python", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "medium"
+      description: "Anthropic output is used to write system configuration files (e.g., /etc/, /sys/, config.py, settings.py) without validation or authorization checks. This grants the LLM excessive agency to modify system configuration."
+      remediation: "Never allow LLM output to directly modify system configuration files. Use read-only access, require explicit user confirmation, implement configuration validation, and use separate configuration management tools."
+      examples:
+        vulnerable: "samples/llm08_excessive_agency.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/250.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: anthropic-excessive-agency-code-file-write
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+              ...
+              $CODE = $RESPONSE.content[0].text
+              ...
+          - pattern-inside: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+              ...
+              $CODE = $RESPONSE.content[0].text
+              ...
+          - pattern-inside: |
+              $RESPONSE = $CLIENT.messages.create(...)
+              ...
+              $CODE = $RESPONSE.content[0].text
+              ...
+      - pattern-either:
+          # Code file writes
+          - pattern: |
+              open($FILEPATH, "w").write($CODE)
+          - pattern: |
+              with open($FILEPATH, "w") as $VAR:
+                $VAR.write($CODE)
+          - pattern: |
+              $FILE = open($FILEPATH, "w")
+              ...
+              $FILE.write($CODE)
+          - pattern: |
+              Path($FILEPATH).write_text($CODE)
+          - pattern: |
+              pathlib.Path($FILEPATH).write_text($CODE)
+      - metavariable-regex:
+          metavariable: $FILEPATH
+          regex: (\.py$|\.js$|\.ts$|\.java$|\.go$|\.rs$|\.cpp$|\.c$|\.php$|\.rb$|\.sh$|\.bash$|\.zsh$|\.ps1$|\.bat$|\.cmd$)
+    message: "LLM08: Excessive Agency - Anthropic output used to write code files without restrictions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-privileges
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-250", "CWE-284", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/250.html", "https://cwe.mitre.org/data/definitions/284.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "code-modification", "privilege-escalation", "llm", "ai-security", "anthropic"]
+      technology: ["python", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "medium"
+      description: "Anthropic output is used to write code files (.py, .js, .sh, etc.) without validation or authorization checks. This grants the LLM excessive agency to modify application code, potentially introducing backdoors or malicious functionality."
+      remediation: "Never allow LLM output to directly modify code files. Use read-only access, require explicit user confirmation, implement code review processes, and use version control with proper access controls."
+      examples:
+        vulnerable: "samples/llm08_excessive_agency.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/250.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: anthropic-excessive-agency-package-installation
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+      - pattern-inside: |
+          $PACKAGE = $RESPONSE.content[0].text
+          ...
+      - pattern-either:
+          # Package installation operations
+          - pattern: |
+              subprocess.run(["pip", "install", $PACKAGE])
+          - pattern: |
+              subprocess.run(["pip3", "install", $PACKAGE])
+          - pattern: |
+              subprocess.run(["pip", "install", $PACKAGE, ...])
+          - pattern: |
+              subprocess.run(["pip3", "install", $PACKAGE, ...])
+          - pattern: |
+              subprocess.call(["pip", "install", $PACKAGE])
+          - pattern: |
+              subprocess.call(["pip3", "install", $PACKAGE])
+          - pattern: |
+              subprocess.Popen(["pip", "install", $PACKAGE])
+          - pattern: |
+              subprocess.Popen(["pip3", "install", $PACKAGE])
+          - pattern: |
+              os.system(f"pip install {$PACKAGE}")
+          - pattern: |
+              os.system(f"pip3 install {$PACKAGE}")
+    message: "LLM08: Excessive Agency - Anthropic output used for package installation without restrictions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: excessive-privileges
+      owasp: "LLM08"
+      owasp-title: "Excessive Agency"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM08.html"
+      cwe: ["CWE-250", "CWE-284", "CWE-494"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/250.html", "https://cwe.mitre.org/data/definitions/284.html", "https://cwe.mitre.org/data/definitions/494.html"]
+      tags: ["owasp", "llm08", "excessive-agency", "package-installation", "supply-chain", "privilege-escalation", "llm", "ai-security", "anthropic"]
+      technology: ["python", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "medium"
+      description: "Anthropic output is used directly for package installation (pip install) without package whitelisting or validation. This grants the LLM excessive agency to install arbitrary packages, potentially introducing malicious dependencies."
+      remediation: "Never allow LLM output to directly control package installation. Use package whitelists, require explicit user confirmation, implement package verification (checksums, signatures), and use read-only environments when possible."
+      examples:
+        vulnerable: "samples/llm08_excessive_agency.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/250.html"
+    paths:
+      include:
+        - "*.py"

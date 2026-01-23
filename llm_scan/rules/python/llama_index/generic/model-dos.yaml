@@ -1,0 +1,67 @@
+rules:
+  # ============================================================================
+  # LLM04: Model Denial of Service
+  # ============================================================================
+  # Detects missing rate limiting and token limits in query engines
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules llamaindex-llm04-query-engine-no-token-limit
+  #
+  # OWASP: LLM04
+  # CWE: CWE-400, CWE-770
+  # ============================================================================
+
+  - id: llamaindex-llm04-query-engine-no-token-limit
+    patterns:
+      - pattern-either:
+          # Query engine without max_tokens in service context
+          - pattern: |
+              $QUERY_ENGINE = $INDEX.as_query_engine()
+              ...
+              $QUERY_ENGINE.query(...)
+          - pattern: |
+              $QUERY_ENGINE = RetrieverQueryEngine(...)
+              ...
+              $QUERY_ENGINE.query(...)
+      - pattern-not-inside: |
+          ServiceContext.from_defaults(max_tokens=...)
+          ...
+          $QUERY_ENGINE = ...
+      - pattern-not-inside: |
+          $SERVICE_CONTEXT = ServiceContext.from_defaults(max_tokens=...)
+          ...
+          $QUERY_ENGINE = ...
+      - pattern-not-inside: |
+          $LLM = ...(max_tokens=...)
+          ...
+          ServiceContext.from_defaults(llm=$LLM)
+          ...
+          $QUERY_ENGINE = ...
+    message: "LLM04: Model Denial of Service - Query engine without max_tokens limit"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: denial-of-service
+      owasp: "LLM04"
+      owasp-title: "Model Denial of Service"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM04.html"
+      cwe: ["CWE-400", "CWE-770"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/400.html", "https://cwe.mitre.org/data/definitions/770.html"]
+      tags: ["owasp", "llm04", "dos", "denial-of-service", "token-limit", "query-engine", "llamaindex", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - may be configured elsewhere
+      impact: "medium"
+      likelihood: "medium"  # AI will assess if limits are configured elsewhere
+      description: "Query engine is created without max_tokens limit in service context. Without token limits, malicious or large queries can exhaust resources and cause denial of service. AI analysis will determine if limits are configured elsewhere or if this is actually vulnerable."
+      remediation: "Always set max_tokens limit in ServiceContext or LLM configuration. Implement rate limiting for query engine endpoints. Monitor resource usage and set appropriate quotas. Use streaming responses for large outputs."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_model_dos.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/400.html"
+    paths:
+      include:
+        - "*.py"

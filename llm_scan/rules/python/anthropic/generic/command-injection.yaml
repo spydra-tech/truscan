@@ -1,0 +1,420 @@
+rules:
+- id: anthropic-command-injection-subprocess
+  patterns:
+  - pattern-either:
+    - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+        '
+    - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+        '
+    - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+        '
+  - pattern-either:
+    - pattern: subprocess.run($VAR, ...)
+    - pattern: subprocess.call($VAR, ...)
+    - pattern: subprocess.Popen($VAR, ...)
+    - pattern: os.system($VAR)
+    - pattern: os.popen($VAR)
+  - metavariable-regex:
+      metavariable: $VAR
+      regex: (code|content|text|output|result|response|command|cmd|str|message|data|resp|answer|choices\[0\]\.message\.content|choices\[0\]\.text)
+  message: 'LLM02: Insecure Output Handling - Anthropic output passed to subprocess/os.system (command injection risk)'
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: command-injection
+    owasp: LLM02
+    owasp-title: Insecure Output Handling
+    owasp-url: https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html
+    cwe:
+    - CWE-78
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/78.html
+    tags:
+    - owasp
+    - llm02
+    - insecure-output
+    - command-injection
+    - subprocess
+    - os.system
+    - llm
+    - ai-security
+    - anthropic
+    technology:
+    - python
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: Anthropic output is passed to subprocess.run(), subprocess.call(), subprocess.Popen(), or os.system() without validation, allowing command injection if the LLM output contains shell commands.
+    remediation: Never execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists and parameterized commands.
+    examples:
+      vulnerable: samples/llm02_insecure_output.py
+    references:
+    - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    - https://cwe.mitre.org/data/definitions/78.html
+  paths:
+    include:
+    - '*.py'
+- id: anthropic-command-injection-shell-true
+  patterns:
+  - pattern-either:
+    - pattern: subprocess.run($VAR, shell=True, ...)
+    - pattern: subprocess.call($VAR, shell=True, ...)
+    - pattern: subprocess.Popen($VAR, shell=True, ...)
+  - pattern-inside: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+      ...
+
+      '
+  - metavariable-regex:
+      metavariable: $VAR
+      regex: (code|content|text|output|result|response|command|cmd|str|message|data|resp|answer|choices\[0\]\.message\.content|choices\[0\]\.text)
+  message: 'LLM02: Insecure Output Handling - Anthropic output passed to subprocess with shell=True (command injection)'
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: command-injection
+    owasp: LLM02
+    owasp-title: Insecure Output Handling
+    owasp-url: https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html
+    cwe:
+    - CWE-78
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/78.html
+    tags:
+    - owasp
+    - llm02
+    - insecure-output
+    - command-injection
+    - subprocess
+    - shell
+    - llm
+    - ai-security
+    - anthropic
+    - shell-true
+    technology:
+    - python
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: Anthropic output is passed to subprocess functions with shell=True, which enables shell interpretation and makes command injection attacks easier.
+    remediation: Never use shell=True with untrusted input. Use shell=False and pass commands as lists. Validate and sanitize all command arguments.
+    examples:
+      vulnerable: samples/llm02_insecure_output.py
+    references:
+    - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    - https://cwe.mitre.org/data/definitions/78.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-command-injection-subprocess
+  patterns:
+  - pattern-either:
+    - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+        '
+    - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+        '
+    - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+        '
+    - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+        '
+  - pattern-either:
+    - pattern: subprocess.run($VAR, ...)
+    - pattern: subprocess.call($VAR, ...)
+    - pattern: subprocess.Popen($VAR, ...)
+    - pattern: os.system($VAR)
+    - pattern: os.popen($VAR)
+  - metavariable-regex:
+      metavariable: $VAR
+      regex: (code|content|text|output|result|response|command|cmd|str|message|data|resp|answer)
+  message: LLM output is passed to subprocess/os.system, which can lead to command injection
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: command-injection
+    cwe:
+    - CWE-78
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/78.html
+    tags:
+    - command-injection
+    - subprocess
+    - os.system
+    - llm
+    - ai-security
+    - injection
+    technology:
+    - python
+    - anthropic
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is passed to subprocess.run(), subprocess.call(), subprocess.Popen(), or os.system() without validation, allowing command injection if the LLM output contains shell commands.
+    remediation: Never execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists and parameterized commands.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/attacks/Command_Injection
+    - https://cwe.mitre.org/data/definitions/78.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-command-injection-shell
+  patterns:
+  - pattern-either:
+    - pattern: subprocess.run($VAR, shell=True, ...)
+    - pattern: subprocess.call($VAR, shell=True, ...)
+    - pattern: subprocess.Popen($VAR, shell=True, ...)
+  - pattern-inside: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+      ...
+
+      '
+  - metavariable-regex:
+      metavariable: $VAR
+      regex: (code|content|text|output|result|response|command|cmd|str|message|data|resp|answer)
+  message: LLM output is passed to subprocess with shell=True, enabling command injection
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: command-injection
+    cwe:
+    - CWE-78
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/78.html
+    tags:
+    - command-injection
+    - subprocess
+    - shell
+    - llm
+    - ai-security
+    - injection
+    - shell-true
+    technology:
+    - python
+    - anthropic
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is passed to subprocess functions with shell=True, which enables shell interpretation and makes command injection attacks easier.
+    remediation: Never use shell=True with untrusted input. Use shell=False and pass commands as lists. Validate and sanitize all command arguments.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/attacks/Command_Injection
+    - https://cwe.mitre.org/data/definitions/78.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-subprocess-direct
+  pattern-either:
+  - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.content[0].text
+
+      ...
+
+      subprocess.run($VAR, ...)
+
+      '
+  - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.content[0].text
+
+      ...
+
+      subprocess.run($VAR, ...)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.content[0].text
+
+      ...
+
+      subprocess.run($VAR, ...)
+
+      '
+  message: LLM output extracted and passed to subprocess.run() - COMMAND INJECTION
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: command-injection
+    cwe:
+    - CWE-78
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/78.html
+    tags:
+    - command-injection
+    - subprocess
+    - llm
+    - ai-security
+    - direct
+    - injection
+    technology:
+    - python
+    - anthropic
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is directly extracted from response and passed to subprocess functions without validation, allowing command injection.
+    remediation: Never execute LLM output as shell commands. Use subprocess with shell=False and validate all inputs.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/attacks/Command_Injection
+    - https://cwe.mitre.org/data/definitions/78.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-os-system-direct
+  pattern-either:
+  - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.content[0].text
+
+      ...
+
+      os.system($VAR)
+
+      '
+  - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.content[0].text
+
+      ...
+
+      os.system($VAR)
+
+      '
+  - pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+      ...
+
+      $VAR = $RESPONSE.content[0].text
+
+      ...
+
+      os.system($VAR)
+
+      '
+  message: LLM output extracted and passed to os.system() - COMMAND INJECTION
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: command-injection
+    cwe:
+    - CWE-78
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/78.html
+    tags:
+    - command-injection
+    - subprocess
+    - llm
+    - ai-security
+    - direct
+    - injection
+    technology:
+    - python
+    - anthropic
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is directly extracted from response and passed to subprocess functions without validation, allowing command injection.
+    remediation: Never execute LLM output as shell commands. Use subprocess with shell=False and validate all inputs.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/attacks/Command_Injection
+    - https://cwe.mitre.org/data/definitions/78.html
+  paths:
+    include:
+    - '*.py'
+- id: llm-anthropic-subprocess-direct
+  pattern: '$RESPONSE = $CLIENT.messages.create(...)
+
+    ...
+
+    $VAR = $RESPONSE.content[0].text
+
+    ...
+
+    subprocess.run($VAR, ...)
+
+    '
+  message: Anthropic LLM output extracted and passed to subprocess.run() - COMMAND INJECTION
+  severity: ERROR
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: command-injection
+    cwe:
+    - CWE-78
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/78.html
+    tags:
+    - command-injection
+    - subprocess
+    - llm
+    - ai-security
+    - direct
+    - injection
+    technology:
+    - python
+    - anthropic
+    - anthropic
+    - llm
+    confidence: high
+    impact: critical
+    likelihood: high
+    description: LLM output is directly extracted from response and passed to subprocess functions without validation, allowing command injection.
+    remediation: Never execute LLM output as shell commands. Use subprocess with shell=False and validate all inputs.
+    examples:
+      vulnerable: samples/vulnerable_app.py
+    references:
+    - https://owasp.org/www-community/attacks/Command_Injection
+    - https://cwe.mitre.org/data/definitions/78.html
+  paths:
+    include:
+    - '*.py'

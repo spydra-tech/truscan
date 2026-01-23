@@ -1,0 +1,209 @@
+rules:
+  # ============================================================================
+  # LLM01: Prompt Injection - LangChain Generic (Template Injection)
+  # ============================================================================
+  # Detects template injection vulnerabilities in LangChain prompt templates
+  # CVE-2023-44467, CVE-2023-46229: Template injection allowing attribute access
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules langchain-llm01-template-injection-direct \
+  #     --ai-analyze-rules langchain-llm01-template-injection-concatenation \
+  #     --ai-analyze-rules langchain-llm01-template-attribute-access
+  #
+  # OWASP: LLM01
+  # CWE: CWE-79, CWE-94
+  # ============================================================================
+
+  - id: langchain-llm01-template-injection-direct
+    patterns:
+      - pattern-either:
+          # User input directly in template constructor
+          - pattern: |
+              ChatPromptTemplate.from_template($USER_INPUT)
+          - pattern: |
+              PromptTemplate.from_template($USER_INPUT)
+          - pattern: |
+              $TEMPLATE = ChatPromptTemplate.from_template($USER_INPUT)
+          - pattern: |
+              $TEMPLATE = PromptTemplate.from_template($USER_INPUT)
+          # Template with user input concatenation
+          - pattern: |
+              ChatPromptTemplate.from_template(f"...{$USER_INPUT}...")
+          - pattern: |
+              PromptTemplate.from_template(f"...{$USER_INPUT}...")
+          - pattern: |
+              ChatPromptTemplate.from_template("..." + $USER_INPUT + "...")
+          - pattern: |
+              PromptTemplate.from_template("..." + $USER_INPUT + "...")
+          # from_messages with user input
+          - pattern: |
+              ChatPromptTemplate.from_messages([..., ("user", $USER_INPUT), ...])
+          - pattern: |
+              ChatPromptTemplate.from_messages([..., $USER_INPUT, ...])
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_template|template_string)
+    message: "LLM01: Template Injection - User input directly inserted into LangChain prompt template (CVE-2023-44467)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Template Injection)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "template-injection", "injection", "langchain", "cve-2023-44467", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "high"  # High confidence - template injection is exploitable
+      impact: "critical"
+      likelihood: "high"
+      description: "User input is directly inserted into LangChain prompt templates (ChatPromptTemplate, PromptTemplate). This allows template injection attacks where attackers can access Python object internals through template syntax, potentially leading to code execution or sensitive data disclosure. CVE-2023-44467 and CVE-2023-46229."
+      remediation: "Never use user input directly in template strings. Use template variables instead: PromptTemplate.from_template('User said: {user_input}'). Then format with: template.format(user_input=sanitized_input). Always sanitize and validate user input before template formatting."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_template_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://github.com/langchain-ai/langchain/security/advisories/GHSA-6qv9-48xg-fc7f"
+        - "https://learnprompting.org/docs/category/-prompt-injection"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm01-template-injection-concatenation
+    patterns:
+      - pattern-either:
+          # Template with string concatenation
+          - pattern: |
+              $TEMPLATE_STR = ... + $USER_INPUT + ...
+              ...
+              ChatPromptTemplate.from_template($TEMPLATE_STR)
+          - pattern: |
+              $TEMPLATE_STR = f"...{$USER_INPUT}..."
+              ...
+              ChatPromptTemplate.from_template($TEMPLATE_STR)
+          - pattern: |
+              $TEMPLATE_STR = ... + $USER_INPUT + ...
+              ...
+              PromptTemplate.from_template($TEMPLATE_STR)
+          - pattern: |
+              $TEMPLATE_STR = f"...{$USER_INPUT}..."
+              ...
+              PromptTemplate.from_template($TEMPLATE_STR)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_template|template_string)
+    message: "LLM01: Template Injection - User input concatenated into LangChain template string"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Template Injection)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "template-injection", "injection", "langchain", "string-concatenation", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "User input is concatenated into template strings before being passed to LangChain template constructors. This enables template injection attacks where attackers can inject template syntax to access Python object internals."
+      remediation: "Use template variables instead of string concatenation. Use PromptTemplate.from_template('Template: {var}') and format with template.format(var=sanitized_input). Never concatenate user input into template strings."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_template_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://github.com/langchain-ai/langchain/security/advisories/GHSA-6qv9-48xg-fc7f"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm01-template-attribute-access
+    patterns:
+      - pattern-either:
+          # Template with attribute access patterns (CVE-2023-44467)
+          - pattern: |
+              ChatPromptTemplate.from_template($TEMPLATE)
+          - pattern: |
+              PromptTemplate.from_template($TEMPLATE)
+      - metavariable-regex:
+          metavariable: $TEMPLATE
+          regex: (.*\{\{.*\.__.*__.*\}\}.*|.*\{\{.*\[.*\]\}.*|.*\{\{.*\.__.*\}\}.*)
+    message: "LLM01: Template Injection - Template contains attribute access patterns (CVE-2023-44467)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Template Attribute Access)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "template-injection", "attribute-access", "langchain", "cve-2023-44467", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LangChain template contains attribute access patterns (e.g., {{obj.__globals__}} or {{obj[key]}}) that allow attackers to traverse Python object attributes, potentially accessing sensitive data like environment variables. CVE-2023-44467."
+      remediation: "Remove attribute access patterns from templates. Use only simple variable substitution. If dynamic attribute access is needed, implement it in application code, not in templates. Sanitize all template content."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_template_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://github.com/langchain-ai/langchain/security/advisories/GHSA-6qv9-48xg-fc7f"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm01-chain-user-input
+    patterns:
+      - pattern-either:
+          # User input in chain execution
+          - pattern: |
+              LLMChain(...).run($USER_INPUT)
+          - pattern: |
+              $CHAIN.run($USER_INPUT)
+          - pattern: |
+              $CHAIN.invoke({"input": $USER_INPUT})
+          - pattern: |
+              SimpleSequentialChain(...).run($USER_INPUT)
+          - pattern: |
+              SequentialChain(...).run($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content)
+    message: "LLM01: Potential Prompt Injection - User input passed to LangChain chain execution"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "injection", "langchain", "chain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on chain configuration
+      impact: "critical"
+      likelihood: "medium"  # AI will assess based on chain configuration
+      description: "User input is passed directly to LangChain chain execution methods (run, invoke). If the chain uses templates or prompts that include this input without proper sanitization, this can lead to prompt injection. AI analysis will determine if the chain configuration is vulnerable."
+      remediation: "Validate and sanitize all user input before passing to chains. Use parameterized templates in chains. Implement input validation and output encoding. Review chain configuration to ensure user input is properly handled."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_chain_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://learnprompting.org/docs/category/-prompt-injection"
+    paths:
+      include:
+        - "*.py"

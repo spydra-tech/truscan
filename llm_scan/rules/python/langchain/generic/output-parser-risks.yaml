@@ -1,0 +1,119 @@
+rules:
+  # ============================================================================
+  # LLM02: Output Parser Vulnerabilities
+  # ============================================================================
+  # Detects vulnerabilities in LangChain output parsers that can lead to
+  # code execution or unsafe deserialization
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules langchain-llm02-output-parser-to-eval \
+  #     --ai-analyze-rules langchain-llm02-output-parser-unsafe
+  #
+  # OWASP: LLM02
+  # CWE: CWE-94, CWE-502
+  # ============================================================================
+
+  - id: langchain-llm02-output-parser-to-eval
+    patterns:
+      - pattern-either:
+          # Output parser result to eval/exec/compile
+          - pattern: |
+              $RESPONSE = $CHAIN.run(...)
+              ...
+              $PARSED = $PARSER.parse($RESPONSE)
+              ...
+              eval($PARSED)
+          - pattern: |
+              $RESPONSE = $CHAIN.run(...)
+              ...
+              $PARSED = $PARSER.parse($RESPONSE)
+              ...
+              exec($PARSED)
+          - pattern: |
+              $RESPONSE = $CHAIN.run(...)
+              ...
+              $PARSED = $PARSER.parse($RESPONSE)
+              ...
+              compile($PARSED, ...)
+          - pattern: |
+              $PARSED = $PARSER.parse($LLM_OUTPUT)
+              ...
+              eval($PARSED)
+          - pattern: |
+              $PARSED = $PARSER.parse($LLM_OUTPUT)
+              ...
+              exec($PARSED)
+    message: "LLM02: Code Injection - Output parser result passed to eval/exec/compile"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "output-parser", "eval", "exec", "langchain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "LangChain output parser result is passed directly to eval(), exec(), or compile() functions. Output parsers may extract code from LLM responses, and executing it leads to arbitrary code execution."
+      remediation: "NEVER execute output parser results as code. Use safe parsing methods, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_output_parser.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm02-output-parser-unsafe-deserialization
+    patterns:
+      - pattern-either:
+          # Output parser with potentially unsafe deserialization
+          - pattern: |
+              $PARSED = $PARSER.parse($LLM_OUTPUT)
+              ...
+              pickle.loads($PARSED)
+          - pattern: |
+              $PARSED = $PARSER.parse($LLM_OUTPUT)
+              ...
+              yaml.load($PARSED)
+          - pattern: |
+              $PARSED = $PARSER.parse($LLM_OUTPUT)
+              ...
+              json.loads($PARSED)
+              ...
+              eval($PARSED)
+    message: "LLM02: Unsafe Deserialization - Output parser result used in unsafe deserialization"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: insecure-deserialization
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-502"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/502.html"]
+      tags: ["owasp", "llm02", "insecure-deserialization", "output-parser", "pickle", "yaml", "langchain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on parser type
+      impact: "high"
+      likelihood: "medium"  # AI will assess parser type and usage
+      description: "Output parser result is used in potentially unsafe deserialization (pickle.loads, yaml.load). If the parser extracts serialized data from LLM output, this can lead to code execution via deserialization attacks. AI analysis will determine if the parser type and usage are vulnerable."
+      remediation: "Use safe deserialization methods (json.loads, yaml.safe_load). Never use pickle.loads with untrusted data. Validate parser output before deserialization. Use structured output formats with schema validation."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_output_parser.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/502.html"
+    paths:
+      include:
+        - "*.py"

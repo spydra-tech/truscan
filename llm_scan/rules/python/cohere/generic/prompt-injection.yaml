@@ -1,0 +1,198 @@
+rules:
+  # ============================================================================
+  # LLM01: Prompt Injection - Cohere Generic (AI-Enhanced Detection)
+  # ============================================================================
+  # This rule set is designed to work with AI analysis to reduce false positives.
+  # Semgrep catches potential patterns broadly, AI determines exploitability.
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules cohere-llm01-prompt-injection-chat \
+  #     --ai-analyze-rules cohere-llm01-prompt-injection-generate \
+  #     --ai-analyze-rules cohere-llm01-prompt-injection-concatenation
+  #
+  # OWASP: LLM01
+  # CWE: CWE-79, CWE-94
+  # ============================================================================
+
+  - id: cohere-llm01-prompt-injection-chat
+    patterns:
+      - pattern-either:
+          # Direct user input in chat messages
+          - pattern: |
+              cohere.Client().chat(messages=[..., {"role": "user", "content": $USER_INPUT}, ...])
+          - pattern: |
+              cohere.Client().chat(messages=[..., {"content": $USER_INPUT}, ...])
+          - pattern: |
+              cohere.ClientV2().chat(messages=[..., {"role": "user", "content": $USER_INPUT}, ...])
+          - pattern: |
+              cohere.ClientV2().chat(messages=[..., {"content": $USER_INPUT}, ...])
+          - pattern: |
+              $CLIENT.chat(messages=[..., {"role": "user", "content": $USER_INPUT}, ...])
+          - pattern: |
+              $CLIENT.chat(messages=[..., {"content": $USER_INPUT}, ...])
+      # Only exclude well-known standard library/framework escaping functions
+      # AI will analyze if custom sanitization is sufficient
+      - pattern-not-inside: |
+          $SANITIZED = html.escape($USER_INPUT)
+          ...
+      - pattern-not-inside: |
+          $SANITIZED = markupsafe.escape($USER_INPUT)
+          ...
+      - pattern-not-inside: |
+          $SANITIZED = bleach.clean($USER_INPUT)
+          ...
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content)
+    message: "LLM01: Potential Prompt Injection - User input directly inserted into Cohere chat prompt"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "injection", "input-validation", "llm", "ai-security", "cohere", "ai-enhanced"]
+      technology: ["python", "cohere", "llm"]
+      confidence: "medium"  # Medium confidence - AI will analyze to determine if exploitable
+      impact: "critical"
+      likelihood: "medium"  # AI will assess actual likelihood based on context
+      description: "User input is directly inserted into Cohere chat prompts. This pattern may be vulnerable to prompt injection if input is not properly sanitized or validated. AI analysis will determine if the vulnerability is actually exploitable based on code context, sanitization, and validation."
+      remediation: "Sanitize and validate all user input before including in prompts. Use prompt templates with parameterized inputs. Implement input validation, output encoding, and prompt engineering best practices. Consider using delimiters to separate user data from instructions."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/cohere_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://learnprompting.org/docs/category/-prompt-injection"
+    paths:
+      include:
+        - "*.py"
+
+  - id: cohere-llm01-prompt-injection-generate
+    patterns:
+      - pattern-either:
+          # Direct user input in generate prompts
+          - pattern: |
+              cohere.Client().generate(prompt=$USER_INPUT, ...)
+          - pattern: |
+              cohere.Client().generate(..., prompt=$USER_INPUT, ...)
+          - pattern: |
+              $CLIENT.generate(prompt=$USER_INPUT, ...)
+          - pattern: |
+              $CLIENT.generate(..., prompt=$USER_INPUT, ...)
+      # Only exclude well-known standard library/framework escaping functions
+      - pattern-not-inside: |
+          $SANITIZED = html.escape($USER_INPUT)
+          ...
+      - pattern-not-inside: |
+          $SANITIZED = markupsafe.escape($USER_INPUT)
+          ...
+      - pattern-not-inside: |
+          $SANITIZED = bleach.clean($USER_INPUT)
+          ...
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content)
+    message: "LLM01: Potential Prompt Injection - User input directly inserted into Cohere generate prompt"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "injection", "input-validation", "llm", "ai-security", "cohere", "ai-enhanced"]
+      technology: ["python", "cohere", "llm"]
+      confidence: "medium"  # Medium confidence - AI will analyze to determine if exploitable
+      impact: "critical"
+      likelihood: "medium"  # AI will assess actual likelihood based on context
+      description: "User input is directly inserted into Cohere generate prompts. This pattern may be vulnerable to prompt injection if input is not properly sanitized or validated. AI analysis will determine if the vulnerability is actually exploitable based on code context, sanitization, and validation."
+      remediation: "Sanitize and validate all user input before including in prompts. Use prompt templates with parameterized inputs. Implement input validation, output encoding, and prompt engineering best practices. Consider using delimiters to separate user data from instructions."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/cohere_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://learnprompting.org/docs/category/-prompt-injection"
+    paths:
+      include:
+        - "*.py"
+
+  - id: cohere-llm01-prompt-injection-concatenation
+    patterns:
+      - pattern-either:
+          # String concatenation in chat prompts
+          - pattern: |
+              cohere.Client().chat(messages=[..., {"role": "user", "content": $PROMPT + $USER_INPUT}, ...])
+          - pattern: |
+              cohere.Client().chat(messages=[..., {"content": $PROMPT + $USER_INPUT}, ...])
+          - pattern: |
+              $CLIENT.chat(messages=[..., {"role": "user", "content": $PROMPT + $USER_INPUT}, ...])
+          - pattern: |
+              $CLIENT.chat(messages=[..., {"content": $PROMPT + $USER_INPUT}, ...])
+          # F-string interpolation in chat
+          - pattern: |
+              cohere.Client().chat(messages=[..., {"role": "user", "content": f"...{$USER_INPUT}..."}, ...])
+          - pattern: |
+              cohere.Client().chat(messages=[..., {"content": f"...{$USER_INPUT}..."}, ...])
+          - pattern: |
+              $CLIENT.chat(messages=[..., {"role": "user", "content": f"...{$USER_INPUT}..."}, ...])
+          - pattern: |
+              $CLIENT.chat(messages=[..., {"content": f"...{$USER_INPUT}..."}, ...])
+          # String concatenation in generate prompts
+          - pattern: |
+              cohere.Client().generate(prompt=$PROMPT + $USER_INPUT, ...)
+          - pattern: |
+              $CLIENT.generate(prompt=$PROMPT + $USER_INPUT, ...)
+          # F-string interpolation in generate
+          - pattern: |
+              cohere.Client().generate(prompt=f"...{$USER_INPUT}...", ...)
+          - pattern: |
+              $CLIENT.generate(prompt=f"...{$USER_INPUT}...", ...)
+          # Variable assignment before API call
+          - pattern: |
+              $PROMPT = ... + $USER_INPUT + ...
+              ...
+              cohere.Client().chat(messages=[..., {"content": $PROMPT}, ...])
+          - pattern: |
+              $PROMPT = f"...{$USER_INPUT}..."
+              ...
+              cohere.Client().generate(prompt=$PROMPT, ...)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content)
+    message: "LLM01: Potential Prompt Injection - User input concatenated into Cohere prompt"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "injection", "input-validation", "llm", "ai-security", "cohere", "ai-enhanced"]
+      technology: ["python", "cohere", "llm"]
+      confidence: "medium"  # Medium confidence - AI will analyze to determine if exploitable
+      impact: "critical"
+      likelihood: "medium"  # AI will assess actual likelihood based on context
+      description: "User input is concatenated into Cohere prompts using string concatenation or f-strings. This pattern may be vulnerable to prompt injection if input is not properly sanitized or validated. AI analysis will determine if the vulnerability is actually exploitable based on code context, sanitization, and validation."
+      remediation: "Sanitize and validate all user input before including in prompts. Use prompt templates with parameterized inputs. Implement input validation, output encoding, and prompt engineering best practices. Consider using delimiters to separate user data from instructions."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/cohere_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://learnprompting.org/docs/category/-prompt-injection"
+    paths:
+      include:
+        - "*.py"

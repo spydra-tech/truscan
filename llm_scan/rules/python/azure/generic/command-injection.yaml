@@ -1,0 +1,112 @@
+rules:
+  # ============================================================================
+  # LLM02: Command Injection - Azure OpenAI Service Generic
+  # ============================================================================
+  # Detects LLM output used in command execution functions
+  # OWASP: LLM02
+  # CWE: CWE-78
+  # ============================================================================
+
+  - id: azure-command-injection-subprocess
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          AzureOpenAI().chat.completions.create(...)
+      - pattern: |
+          $CLIENT.chat.completions.create(...)
+      - pattern: |
+          openai.AzureOpenAI(...).chat.completions.create(...)
+    pattern-sinks:
+      - pattern: |
+          subprocess.run($AZURE_OUTPUT, ...)
+      - pattern: |
+          subprocess.call($AZURE_OUTPUT, ...)
+      - pattern: |
+          subprocess.Popen($AZURE_OUTPUT, ...)
+      - pattern: |
+          os.system($AZURE_OUTPUT)
+      - pattern: |
+          os.popen($AZURE_OUTPUT)
+    message: "LLM02: Command Injection - Azure OpenAI output passed to command execution functions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm02", "insecure-output", "command-injection", "subprocess", "os.system", "llm", "ai-security", "azure", "azure-openai", "taint", "ai-enhanced"]
+      technology: ["python", "azure", "openai", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Azure OpenAI output flows into command execution functions (subprocess, os.system). If the LLM output contains commands or command-like text, this can lead to arbitrary command execution."
+      remediation: "Never execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists and parameterized commands."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/azure_command_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: azure-command-injection-direct
+    patterns:
+      - pattern-either:
+          # Chat response to subprocess/os.system
+          - pattern: |
+              $RESPONSE = AzureOpenAI().chat.completions.create(...)
+              ...
+              $VAR = $RESPONSE.choices[0].message.content
+              ...
+              subprocess.run($VAR, ...)
+          - pattern: |
+              $RESPONSE = AzureOpenAI().chat.completions.create(...)
+              ...
+              $VAR = $RESPONSE.choices[0].message.content
+              ...
+              os.system($VAR)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+              ...
+              $VAR = $RESPONSE.choices[0].message.content
+              ...
+              subprocess.run($VAR, ...)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+              ...
+              $VAR = $RESPONSE.choices[0].message.content
+              ...
+              os.system($VAR)
+    message: "LLM02: Command Injection - Azure OpenAI output extracted and passed to command execution functions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm02", "insecure-output", "command-injection", "subprocess", "os.system", "llm", "ai-security", "azure", "azure-openai", "ai-enhanced"]
+      technology: ["python", "azure", "openai", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Azure OpenAI chat output is extracted (from .choices[0].message.content) and passed directly to command execution functions (subprocess, os.system). This allows arbitrary command execution if the LLM output contains malicious commands."
+      remediation: "Never execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists and parameterized commands."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/azure_command_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"

@@ -1,0 +1,159 @@
+rules:
+  # ============================================================================
+  # LLM01: Prompt Injection - Hugging Face Pipeline
+  # ============================================================================
+  # Detects prompt injection vulnerabilities in Hugging Face pipeline calls
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules huggingface-llm01-pipeline-user-input \
+  #     --ai-analyze-rules huggingface-llm01-tokenizer-user-input
+  #
+  # OWASP: LLM01
+  # CWE: CWE-79, CWE-94
+  # ============================================================================
+
+  - id: huggingface-llm01-pipeline-user-input
+    patterns:
+      - pattern-either:
+          # Pipeline with user input
+          - pattern: |
+              pipeline("text-generation")($USER_INPUT)
+          - pattern: |
+              pipeline("question-answering")($USER_INPUT)
+          - pattern: |
+              pipeline("text2text-generation")($USER_INPUT)
+          - pattern: |
+              $PIPELINE = pipeline("text-generation")
+              ...
+              $PIPELINE($USER_INPUT)
+          - pattern: |
+              TextGenerationPipeline(...)($USER_INPUT)
+          - pattern: |
+              QuestionAnsweringPipeline(...)($USER_INPUT)
+          - pattern: |
+              $PIPELINE = pipeline(model=$MODEL, task="text-generation")
+              ...
+              $PIPELINE($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query|question)
+    message: "LLM01: Prompt Injection - Pipeline execution with user input"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "pipeline", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "medium"  # Medium confidence - depends on how output is used
+      impact: "high"
+      likelihood: "medium"  # AI will assess based on output usage
+      description: "Pipeline is executed with user input. If pipeline output is used unsafely (e.g., in prompts, code execution, or system commands), this can enable prompt injection attacks. AI analysis will determine if the pipeline output is used unsafely."
+      remediation: "Validate and sanitize user input before pipeline execution. Sanitize pipeline output before using in critical operations. Implement input validation and output filtering. Use delimiters to separate user input from system instructions."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: huggingface-llm01-tokenizer-user-input
+    patterns:
+      - pattern-either:
+          # Tokenizer with user input
+          - pattern: |
+              $TOKENIZER($USER_INPUT)
+          - pattern: |
+              $TOKENIZER.encode($USER_INPUT)
+          - pattern: |
+              $TOKENIZER.tokenize($USER_INPUT)
+          - pattern: |
+              AutoTokenizer.from_pretrained(...)
+              ...
+              $TOKENIZER($USER_INPUT)
+          - pattern: |
+              $TOKENIZER = AutoTokenizer.from_pretrained(...)
+              ...
+              $TOKENIZER($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query|question)
+    message: "LLM01: Prompt Injection - Tokenizer execution with user input"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Tokenizer)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "tokenizer", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "medium"  # Medium confidence - depends on how tokens are used
+      impact: "high"
+      likelihood: "medium"  # AI will assess based on token usage
+      description: "Tokenizer is executed with user input. If tokenized input is used in prompts or model inference without proper validation, this can enable prompt injection attacks. AI analysis will determine if tokenized input is used unsafely."
+      remediation: "Validate and sanitize user input before tokenization. Sanitize tokenized input before using in prompts or model inference. Implement input validation and output filtering. Be aware of tokenizer-based injection techniques."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: huggingface-llm01-pipeline-output-to-prompt
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          pipeline(...)
+      - pattern: |
+          $PIPELINE(...)
+      - pattern: |
+          TextGenerationPipeline(...)(...)
+    pattern-sinks:
+      - pattern: |
+          pipeline("text-generation")($PIPELINE_OUTPUT)
+      - pattern: |
+          $PIPELINE($PIPELINE_OUTPUT)
+      - pattern: |
+          f"...{$PIPELINE_OUTPUT}..."
+      - pattern: |
+          "..." + $PIPELINE_OUTPUT + "..."
+    message: "LLM01: Indirect Prompt Injection - Pipeline output flows into another pipeline or prompt without sanitization"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Indirect)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "indirect-injection", "pipeline", "huggingface", "taint", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "medium"  # Medium confidence - depends on sanitization
+      impact: "high"
+      likelihood: "medium"  # AI will assess if sanitization is present
+      description: "Pipeline output flows into another pipeline or prompt construction. If the first pipeline output contains malicious content, this enables indirect prompt injection. AI analysis will determine if the pipeline output is properly sanitized before use."
+      remediation: "Sanitize all pipeline output before including in prompts or other pipelines. Use delimiters to separate pipeline output from instructions. Implement content filtering and validation for pipeline results. Treat all pipeline output as potentially malicious."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_prompt_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"

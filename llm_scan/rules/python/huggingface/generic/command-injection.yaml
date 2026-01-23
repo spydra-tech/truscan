@@ -1,0 +1,64 @@
+rules:
+  # ============================================================================
+  # LLM02: Command Injection - Hugging Face Pipeline Output
+  # ============================================================================
+  # Detects command injection vulnerabilities where pipeline output is used
+  # in command execution functions
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules huggingface-llm02-pipeline-to-command
+  #
+  # OWASP: LLM02
+  # CWE: CWE-78
+  # ============================================================================
+
+  - id: huggingface-llm02-pipeline-to-command
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          pipeline(...)
+      - pattern: |
+          $PIPELINE(...)
+      - pattern: |
+          TextGenerationPipeline(...)(...)
+      - pattern: |
+          QuestionAnsweringPipeline(...)(...)
+    pattern-sinks:
+      - pattern: |
+          subprocess.run($PIPELINE_OUTPUT, ...)
+      - pattern: |
+          subprocess.call($PIPELINE_OUTPUT, ...)
+      - pattern: |
+          subprocess.Popen($PIPELINE_OUTPUT, ...)
+      - pattern: |
+          os.system($PIPELINE_OUTPUT)
+      - pattern: |
+          os.popen($PIPELINE_OUTPUT)
+    message: "LLM02: Command Injection - Pipeline output passed to command execution functions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (Command Injection)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm02", "command-injection", "pipeline", "huggingface", "taint", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Pipeline output flows into command execution functions (subprocess, os.system). If the pipeline generates commands or command-like output, this can lead to arbitrary command execution."
+      remediation: "NEVER execute pipeline output as commands. Use safe parsing methods, validation, and structured output formats. If command execution is needed, use allowlists, parameterized commands, or sandboxed execution environments."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_command_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"

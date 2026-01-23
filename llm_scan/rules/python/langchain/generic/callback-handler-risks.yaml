@@ -1,0 +1,69 @@
+rules:
+  # ============================================================================
+  # LLM06: Callback Handler Information Disclosure
+  # ============================================================================
+  # Detects vulnerabilities where callback handlers log sensitive LLM data
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules langchain-llm06-callback-logging
+  #
+  # OWASP: LLM06
+  # CWE: CWE-200, CWE-532
+  # ============================================================================
+
+  - id: langchain-llm06-callback-logging
+    patterns:
+      - pattern-either:
+          # Callback handlers logging LLM responses
+          - pattern: |
+              class $CALLBACK(BaseCallbackHandler):
+                ...
+                def on_llm_end(self, response, **kwargs):
+                  ...
+                  logger.info($RESPONSE)
+          - pattern: |
+              class $CALLBACK(BaseCallbackHandler):
+                ...
+                def on_chain_end(self, outputs, **kwargs):
+                  ...
+                  logger.info($OUTPUTS)
+          - pattern: |
+              class $CALLBACK(BaseCallbackHandler):
+                ...
+                def on_llm_end(self, response, **kwargs):
+                  ...
+                  print($RESPONSE)
+          - pattern: |
+              class $CALLBACK(BaseCallbackHandler):
+                ...
+                def on_chain_end(self, outputs, **kwargs):
+                  ...
+                  print($OUTPUTS)
+    message: "LLM06: Sensitive Information Disclosure - Callback handler logs LLM responses without sanitization"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: data-exposure
+      owasp: "LLM06"
+      owasp-title: "Sensitive Information Disclosure"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM06.html"
+      cwe: ["CWE-200", "CWE-532"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/200.html", "https://cwe.mitre.org/data/definitions/532.html"]
+      tags: ["owasp", "llm06", "sensitive-info-disclosure", "logging", "callback", "langchain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on what's logged
+      impact: "medium"
+      likelihood: "medium"  # AI will assess if sensitive data is present
+      description: "Callback handler logs LLM responses or chain outputs without sanitization. If responses contain sensitive data (PII, secrets, API keys), this can lead to information disclosure through logs. AI analysis will determine if sensitive data is likely present in the logged content."
+      remediation: "Sanitize LLM responses before logging. Remove or redact sensitive information (PII, secrets, API keys). Use structured logging with field filtering. Implement log access controls and encryption."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_callback_handler.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/200.html"
+    paths:
+      include:
+        - "*.py"

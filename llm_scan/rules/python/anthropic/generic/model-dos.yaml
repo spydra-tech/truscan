@@ -1,0 +1,58 @@
+rules:
+- id: llm04-dos-no-token-limit
+  patterns:
+  - pattern-either:
+    - pattern: anthropic.Anthropic().messages.create(messages=$MESSAGES, ...)
+    - pattern: $CLIENT.messages.create(messages=$MESSAGES, ...)
+  - pattern-not: 'anthropic.Anthropic().messages.create(..., max_tokens=$LIMIT, ...)
+
+      '
+  - pattern-not: 'anthropic.Anthropic().messages.create(..., max_tokens=$LIMIT, ...)
+
+      '
+  - pattern-not: '$CLIENT.messages.create(..., max_tokens=$LIMIT, ...)
+
+      '
+  message: 'LLM04: Model Denial of Service - LLM API call without max_tokens limit'
+  severity: WARNING
+  languages:
+  - python
+  metadata:
+    category: security
+    subcategory: denial-of-service
+    owasp: LLM04
+    owasp-title: Model Denial of Service
+    owasp-url: https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM04.html
+    cwe:
+    - CWE-400
+    - CWE-770
+    cwe-url:
+    - https://cwe.mitre.org/data/definitions/400.html
+    - https://cwe.mitre.org/data/definitions/770.html
+    tags:
+    - owasp
+    - llm04
+    - dos
+    - denial-of-service
+    - token-limit
+    - resource-exhaustion
+    - llm
+    - ai-security
+    technology:
+    - python
+    - anthropic
+    - anthropic
+    - llm
+    confidence: high
+    impact: medium
+    likelihood: high
+    description: LLM API calls are made without max_tokens limit, allowing attackers to cause resource exhaustion through excessive token generation.
+    remediation: Always set max_tokens to limit response size and prevent resource exhaustion. Set appropriate limits based on use case and cost constraints.
+    examples:
+      vulnerable: samples/llm04_model_dos.py
+    references:
+    - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    - https://owasp.org/www-community/attacks/Denial_of_Service
+  paths:
+    include:
+    - '*.py'

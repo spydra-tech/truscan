@@ -1,0 +1,129 @@
+rules:
+  # ============================================================================
+  # LLM02: Insecure Output Handling - SQL Injection (Azure OpenAI Service Generic)
+  # ============================================================================
+  # Detects LLM output used in SQL queries without parameterization
+  # OWASP: LLM02
+  # CWE: CWE-89
+  # ============================================================================
+
+  - id: azure-sql-injection-string-format
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = AzureOpenAI().chat.completions.create(...)
+          - pattern: |
+              $RESPONSE = $CLIENT.chat.completions.create(...)
+          - pattern: |
+              $RESPONSE = openai.AzureOpenAI(...).chat.completions.create(...)
+      - pattern-inside: |
+          $QUERY = $RESPONSE.choices[0].message.content
+          ...
+      - pattern-either:
+          # f-strings
+          - pattern: |
+              $DB.execute(f"...{$QUERY}...")
+          - pattern: |
+              $CURSOR.execute(f"...{$QUERY}...")
+          - pattern: |
+              $SESSION.execute(f"...{$QUERY}...")
+          # String concatenation
+          - pattern: |
+              $DB.execute("..." + $QUERY + "...")
+          - pattern: |
+              $CURSOR.execute("..." + $QUERY + "...")
+          # .format() method
+          - pattern: |
+              $DB.execute("...{}...".format($QUERY))
+          - pattern: |
+              $CURSOR.execute("...{}...".format($QUERY))
+          # % formatting
+          - pattern: |
+              $DB.execute("...%s..." % $QUERY)
+          - pattern: |
+              $CURSOR.execute("...%s..." % $QUERY)
+          # Template strings with named params
+          - pattern: |
+              $DB.execute("...{query}...".format(query=$QUERY))
+          - pattern: |
+              $CURSOR.execute("...{query}...".format(query=$QUERY))
+    message: "LLM02: Insecure Output Handling - Azure OpenAI output concatenated into SQL query (SQL injection risk)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: sql-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-89"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/89.html"]
+      tags: ["owasp", "llm02", "insecure-output", "sql-injection", "llm", "ai-security", "azure", "azure-openai", "string-concatenation"]
+      technology: ["python", "azure", "openai", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Azure OpenAI output is concatenated into SQL queries using string formatting (f-strings, +, .format(), %), allowing SQL injection attacks. This pattern is always dangerous regardless of validation. Detects multiple string formatting methods."
+      remediation: "Use parameterized queries with placeholders. Never concatenate user input or LLM output into SQL queries."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/azure_sql_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://owasp.org/www-community/attacks/SQL_Injection"
+        - "https://cwe.mitre.org/data/definitions/89.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: azure-sql-injection-taint
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          AzureOpenAI().chat.completions.create(...)
+      - pattern: |
+          $CLIENT.chat.completions.create(...)
+      - pattern: |
+          openai.AzureOpenAI(...).chat.completions.create(...)
+    pattern-sinks:
+      - pattern: |
+          $CURSOR.execute(f"...{$AZURE_OUTPUT}...")
+      - pattern: |
+          $DB.execute(f"...{$AZURE_OUTPUT}...")
+      - pattern: |
+          $SESSION.execute(f"...{$AZURE_OUTPUT}...")
+      - pattern: |
+          $CURSOR.execute("..." + $AZURE_OUTPUT + "...")
+      - pattern: |
+          $DB.execute("..." + $AZURE_OUTPUT + "...")
+      - pattern: |
+          $CURSOR.execute("...{}...".format($AZURE_OUTPUT))
+      - pattern: |
+          $CURSOR.execute("...%s..." % $AZURE_OUTPUT)
+    message: "LLM02: SQL Injection - Azure OpenAI output flows into SQL queries without parameterization"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: sql-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-89"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/89.html"]
+      tags: ["owasp", "llm02", "insecure-output", "sql-injection", "llm", "ai-security", "azure", "azure-openai", "taint", "ai-enhanced"]
+      technology: ["python", "azure", "openai", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Azure OpenAI chat output flows into SQL queries using string formatting. This can lead to SQL injection if the LLM output contains malicious SQL code."
+      remediation: "Always use parameterized queries instead of string concatenation. Validate and sanitize LLM output before SQL execution. Use SQL query builders or ORMs that support parameterized queries."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/azure_sql_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/89.html"
+    paths:
+      include:
+        - "*.py"

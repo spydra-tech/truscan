@@ -1,0 +1,174 @@
+rules:
+  # ============================================================================
+  # LLM02: SQL Injection - LlamaIndex Text-to-SQL Engines (CVE-2025-1793, CVE-2024-23751)
+  # ============================================================================
+  # Detects SQL injection vulnerabilities in LlamaIndex Text-to-SQL query engines
+  # CVE-2025-1793: SQL injection in Text-to-SQL engines (CVSS 9.8)
+  # CVE-2024-23751: SQL injection in Text-to-SQL engines (CVSS 9.8)
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules llamaindex-llm02-sql-query-engine-user-input \
+  #     --ai-analyze-rules llamaindex-llm02-sql-retriever-user-input
+  #
+  # OWASP: LLM02
+  # CWE: CWE-89
+  # ============================================================================
+
+  - id: llamaindex-llm02-sql-query-engine-user-input
+    patterns:
+      - pattern-either:
+          # Text-to-SQL query engines with user input
+          - pattern: |
+              NLSQLTableQueryEngine(...).query($USER_INPUT)
+          - pattern: |
+              $SQL_ENGINE = NLSQLTableQueryEngine(...)
+              ...
+              $SQL_ENGINE.query($USER_INPUT)
+          - pattern: |
+              SQLTableRetrieverQueryEngine(...).query($USER_INPUT)
+          - pattern: |
+              $SQL_ENGINE = SQLTableRetrieverQueryEngine(...)
+              ...
+              $SQL_ENGINE.query($USER_INPUT)
+          - pattern: |
+              PGVectorSQLQueryEngine(...).query($USER_INPUT)
+          - pattern: |
+              $SQL_ENGINE = PGVectorSQLQueryEngine(...)
+              ...
+              $SQL_ENGINE.query($USER_INPUT)
+          - pattern: |
+              RetrieverQueryEngine(...).query($USER_INPUT)
+              ...
+              # Context: SQL-related query engine
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query|question)
+    message: "LLM02: SQL Injection - Text-to-SQL query engine execution with user input allows arbitrary SQL execution (CVE-2025-1793, CVE-2024-23751)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: sql-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (SQL Injection)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-89"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/89.html"]
+      tags: ["owasp", "llm02", "sql-injection", "text-to-sql", "llamaindex", "cve-2025-1793", "cve-2024-23751", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Text-to-SQL query engine (NLSQLTableQueryEngine, SQLTableRetrieverQueryEngine, PGVectorSQLQueryEngine) is executed with user input. These engines generate SQL queries from natural language, and prompt injection can lead to arbitrary SQL execution (DROP TABLE, data exfiltration). CVE-2025-1793 and CVE-2024-23751 (CVSS 9.8)."
+      remediation: "Never use Text-to-SQL query engines with untrusted user input. If Text-to-SQL is necessary, implement strict input validation, SQL query sanitization, parameterized queries, and database access controls. Use allowlists for SQL operations and restrict database permissions. Consider using safer alternatives that use parameterized queries."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_sql_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://www.endorlabs.com/learn/critical-sql-injection-vulnerability-in-llamaindex-cve-2025-1793---advisory-and-analysis"
+        - "https://cwe.mitre.org/data/definitions/89.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm02-sql-retriever-user-input
+    patterns:
+      - pattern-either:
+          # SQL retriever with user input
+          - pattern: |
+              NLSQLRetriever(...).retrieve($USER_INPUT)
+          - pattern: |
+              $SQL_RETRIEVER = NLSQLRetriever(...)
+              ...
+              $SQL_RETRIEVER.retrieve($USER_INPUT)
+          - pattern: |
+              NLSQLRetriever(...).get_relevant_documents($USER_INPUT)
+          - pattern: |
+              $SQL_RETRIEVER = NLSQLRetriever(...)
+              ...
+              $SQL_RETRIEVER.get_relevant_documents($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query|question)
+    message: "LLM02: SQL Injection - NLSQLRetriever execution with user input allows arbitrary SQL execution (CVE-2025-1793)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: sql-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (SQL Injection)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-89"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/89.html"]
+      tags: ["owasp", "llm02", "sql-injection", "nlsql-retriever", "llamaindex", "cve-2025-1793", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "NLSQLRetriever is executed with user input. NLSQLRetriever generates SQL queries from natural language, and prompt injection can lead to arbitrary SQL execution. CVE-2025-1793."
+      remediation: "Never use NLSQLRetriever with untrusted user input. If SQL retrieval is necessary, implement strict input validation, SQL query sanitization, parameterized queries, and database access controls. Use allowlists for SQL operations and restrict database permissions."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_sql_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://www.endorlabs.com/learn/critical-sql-injection-vulnerability-in-llamaindex-cve-2025-1793---advisory-and-analysis"
+        - "https://cwe.mitre.org/data/definitions/89.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm02-query-engine-sql-output
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          $SQL_ENGINE.query(...)
+      - pattern: |
+          $SQL_ENGINE.retrieve(...)
+      - pattern: |
+          NLSQLTableQueryEngine(...).query(...)
+      - pattern: |
+          SQLTableRetrieverQueryEngine(...).query(...)
+      - pattern: |
+          NLSQLRetriever(...).retrieve(...)
+    pattern-sinks:
+      - pattern: |
+          $CURSOR.execute($SQL_OUTPUT)
+      - pattern: |
+          $DB.execute($SQL_OUTPUT)
+      - pattern: |
+          $SESSION.execute($SQL_OUTPUT)
+      - pattern: |
+          $CONNECTION.execute($SQL_OUTPUT)
+      - pattern: |
+          execute($SQL_OUTPUT)
+    message: "LLM02: SQL Injection - Query engine output used directly in SQL execution without sanitization"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: sql-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (SQL Injection)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-89"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/89.html"]
+      tags: ["owasp", "llm02", "sql-injection", "query-engine", "llamaindex", "taint", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Query engine output flows into SQL execution without sanitization. If the query engine generates SQL queries, this can lead to SQL injection attacks. Even if the engine is not a Text-to-SQL engine, output should be validated before SQL execution."
+      remediation: "Always use parameterized queries instead of string concatenation. Validate and sanitize query engine output before SQL execution. Use SQL query builders or ORMs that support parameterized queries. Implement SQL query allowlisting and restrict database permissions."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_sql_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/89.html"
+    paths:
+      include:
+        - "*.py"

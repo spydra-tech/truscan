@@ -1,0 +1,158 @@
+rules:
+  # ============================================================================
+  # LLM01/LLM03: Document Loader Vulnerabilities
+  # ============================================================================
+  # Detects vulnerabilities in document loaders that can lead to
+  # indirect prompt injection or training data poisoning
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules langchain-llm03-document-loader-untrusted-url \
+  #     --ai-analyze-rules langchain-llm01-document-loader-to-prompt
+  #
+  # OWASP: LLM01, LLM03
+  # CWE: CWE-79, CWE-94, CWE-502, CWE-918
+  # ============================================================================
+
+  - id: langchain-llm03-document-loader-untrusted-url
+    mode: taint
+    pattern-sources:
+      # Untrusted URL sources
+      - pattern: |
+          requests.get($URL)
+      - pattern: |
+          urllib.request.urlopen($URL)
+      - pattern: |
+          $URL
+      - pattern: |
+          flask.request.args.get(...)
+      - pattern: |
+          request.GET.get(...)
+      - pattern: |
+          request.POST.get(...)
+    pattern-sinks:
+      - pattern: |
+          WebBaseLoader($URL)
+      - pattern: |
+          $LOADER.load()
+    message: "LLM03: Training Data Poisoning - Document loader with untrusted URL (SSRF risk)"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: training-data-poisoning
+      owasp: "LLM03"
+      owasp-title: "Training Data Poisoning"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM03.html"
+      cwe: ["CWE-502", "CWE-918"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/502.html", "https://cwe.mitre.org/data/definitions/918.html"]
+      tags: ["owasp", "llm03", "training-data-poisoning", "document-loader", "ssrf", "langchain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on URL validation
+      impact: "high"
+      likelihood: "medium"  # AI will assess URL source and validation
+      description: "Document loader is used with potentially untrusted URLs. This can lead to SSRF attacks (accessing internal services) and training data poisoning (loading malicious content). AI analysis will determine if the URL source is untrusted and if validation is present."
+      remediation: "Validate and restrict URLs to allowlisted domains. Implement URL validation to prevent SSRF. Sanitize and validate loaded document content. Use trusted document sources only."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_document_loader.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm03-document-loader-untrusted-file
+    mode: taint
+    pattern-sources:
+      # User-controlled file paths
+      - pattern: |
+          flask.request.files.get(...)
+      - pattern: |
+          request.FILES.get(...)
+      - pattern: |
+          request.args.get(...)
+      - pattern: |
+          request.POST.get(...)
+      - pattern: |
+          input(...)
+    pattern-sinks:
+      - pattern: |
+          PyPDFLoader($FILE)
+      - pattern: |
+          TextLoader($FILE)
+      - pattern: |
+          $LOADER.load()
+    message: "LLM03: Training Data Poisoning - Document loader with user-controlled file (path traversal risk)"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: training-data-poisoning
+      owasp: "LLM03"
+      owasp-title: "Training Data Poisoning"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM03.html"
+      cwe: ["CWE-502", "CWE-22"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/502.html", "https://cwe.mitre.org/data/definitions/22.html"]
+      tags: ["owasp", "llm03", "training-data-poisoning", "document-loader", "path-traversal", "langchain", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on path validation
+      impact: "high"
+      likelihood: "medium"  # AI will assess path validation
+      description: "Document loader is used with user-controlled file paths. This can lead to path traversal attacks and training data poisoning (loading malicious files). AI analysis will determine if path validation is present."
+      remediation: "Validate and sanitize file paths. Restrict file access to specific directories. Validate file types and content. Use trusted file sources only."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_document_loader.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: langchain-llm01-document-loader-to-prompt
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          $LOADER.load()
+      - pattern: |
+          $LOADER.load_and_split()
+    pattern-sinks:
+      - pattern: |
+          ChatPromptTemplate.from_template(...)
+      - pattern: |
+          PromptTemplate.from_template(...)
+      - pattern: |
+          f"...{$DOC_CONTENT}..."
+      - pattern: |
+          "..." + $DOC_CONTENT + "..."
+      - pattern: |
+          $CHAIN.run(...)
+      - pattern: |
+          $CHAIN.invoke(...)
+    message: "LLM01: Indirect Prompt Injection - Document loader content flows into prompts without sanitization"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Indirect)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "indirect-injection", "document-loader", "langchain", "taint", "ai-enhanced"]
+      technology: ["python", "langchain", "llm"]
+      confidence: "medium"  # Medium confidence - depends on sanitization
+      impact: "high"
+      likelihood: "medium"  # AI will assess if sanitization is present
+      description: "Document loader content flows into LangChain prompts or chains. If documents contain malicious content, this enables indirect prompt injection. AI analysis will determine if document content is properly sanitized before use in prompts."
+      remediation: "Sanitize all document content before including in prompts. Use delimiters to separate document content from instructions. Implement content filtering and validation for loaded documents. Treat all external document content as potentially malicious."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/langchain_document_loader.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"

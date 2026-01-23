@@ -1,0 +1,121 @@
+rules:
+  # ============================================================================
+  # LLM02: Command Injection - AWS Bedrock Generic
+  # ============================================================================
+  # Detects LLM output used in command execution functions
+  # OWASP: LLM02
+  # CWE: CWE-78
+  # ============================================================================
+
+  - id: aws-command-injection-subprocess
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          $BEDROCK.converse(...)
+      - pattern: |
+          $CLIENT.converse(...)
+      - pattern: |
+          $BEDROCK.invoke_model(...)
+      - pattern: |
+          $CLIENT.invoke_model(...)
+      - pattern: |
+          boto3.client('bedrock-runtime').converse(...)
+    pattern-sinks:
+      - pattern: |
+          subprocess.run($BEDROCK_OUTPUT, ...)
+      - pattern: |
+          subprocess.call($BEDROCK_OUTPUT, ...)
+      - pattern: |
+          subprocess.Popen($BEDROCK_OUTPUT, ...)
+      - pattern: |
+          os.system($BEDROCK_OUTPUT)
+      - pattern: |
+          os.popen($BEDROCK_OUTPUT)
+    message: "LLM02: Command Injection - AWS Bedrock output passed to command execution functions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm02", "insecure-output", "command-injection", "subprocess", "os.system", "llm", "ai-security", "aws", "bedrock", "taint", "ai-enhanced"]
+      technology: ["python", "aws", "bedrock", "boto3", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "AWS Bedrock output flows into command execution functions (subprocess, os.system). If the LLM output contains commands or command-like text, this can lead to arbitrary command execution."
+      remediation: "Never execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists and parameterized commands."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/aws_bedrock_command_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: aws-command-injection-direct
+    patterns:
+      - pattern-either:
+          # Converse response to subprocess/os.system
+          - pattern: |
+              $RESPONSE = $BEDROCK.converse(...)
+              ...
+              $BODY = json.loads($RESPONSE['body'].read())
+              ...
+              $VAR = $BODY['output']['message']['content'][0]['text']
+              ...
+              subprocess.run($VAR, ...)
+          - pattern: |
+              $RESPONSE = $CLIENT.converse(...)
+              ...
+              $VAR = json.loads($RESPONSE['body'].read())['output']['message']['content'][0]['text']
+              ...
+              os.system($VAR)
+          # InvokeModel response to subprocess/os.system
+          - pattern: |
+              $RESPONSE = $BEDROCK.invoke_model(...)
+              ...
+              $BODY = json.loads($RESPONSE['body'].read())
+              ...
+              $VAR = $BODY['completion']
+              ...
+              subprocess.run($VAR, ...)
+          - pattern: |
+              $RESPONSE = $CLIENT.invoke_model(...)
+              ...
+              $VAR = json.loads($RESPONSE['body'].read())['completion']
+              ...
+              os.system($VAR)
+    message: "LLM02: Command Injection - AWS Bedrock output extracted and passed to command execution functions"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm02", "insecure-output", "command-injection", "subprocess", "os.system", "llm", "ai-security", "aws", "bedrock", "ai-enhanced"]
+      technology: ["python", "aws", "bedrock", "boto3", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "AWS Bedrock output is extracted (from JSON response body) and passed directly to command execution functions (subprocess, os.system). This allows arbitrary command execution if the LLM output contains malicious commands."
+      remediation: "Never execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists and parameterized commands."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/aws_bedrock_command_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/78.html"
+    paths:
+      include:
+        - "*.py"

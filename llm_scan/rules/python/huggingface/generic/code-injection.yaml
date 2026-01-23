@@ -1,0 +1,168 @@
+rules:
+  # ============================================================================
+  # LLM02: Code Injection - Hugging Face Pipeline Output
+  # ============================================================================
+  # Detects code execution vulnerabilities where pipeline output is used unsafely
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules huggingface-llm02-pipeline-to-eval \
+  #     --ai-analyze-rules huggingface-llm02-pipeline-to-exec
+  #
+  # OWASP: LLM02
+  # CWE: CWE-94
+  # ============================================================================
+
+  - id: huggingface-llm02-pipeline-to-eval
+    patterns:
+      - pattern-either:
+          # Pipeline output to eval/exec/compile
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline("text-generation", ...)(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = $PIPELINE(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = TextGenerationPipeline(...)(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              $CODE = $RESPONSE[0]["generated_text"]
+              ...
+              eval($CODE)
+    message: "LLM02: Code Injection - Pipeline output passed to eval()"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "pipeline", "eval", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Hugging Face pipeline output is passed directly to eval() function. Pipeline outputs may contain code or code-like text, and executing it leads to arbitrary code execution."
+      remediation: "NEVER execute pipeline output as code. Use safe parsing methods, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_code_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: huggingface-llm02-pipeline-to-exec
+    patterns:
+      - pattern-either:
+          # Pipeline output to exec/compile
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              exec($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline("text-generation", ...)(...)
+              ...
+              exec($RESPONSE)
+          - pattern: |
+              $RESPONSE = $PIPELINE(...)
+              ...
+              exec($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              compile($RESPONSE, ...)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              $CODE = $RESPONSE[0]["generated_text"]
+              ...
+              exec($CODE)
+    message: "LLM02: Code Injection - Pipeline output passed to exec() or compile()"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "pipeline", "exec", "compile", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Hugging Face pipeline output is passed directly to exec() or compile() functions. Pipeline outputs may contain code or code-like text, and executing it leads to arbitrary code execution."
+      remediation: "NEVER execute pipeline output as code. Use safe parsing methods, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_code_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: huggingface-llm02-pipeline-output-to-code
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          pipeline(...)
+      - pattern: |
+          $PIPELINE(...)
+      - pattern: |
+          TextGenerationPipeline(...)(...)
+      - pattern: |
+          QuestionAnsweringPipeline(...)(...)
+    pattern-sinks:
+      - pattern: |
+          eval($PIPELINE_OUTPUT)
+      - pattern: |
+          exec($PIPELINE_OUTPUT)
+      - pattern: |
+          compile($PIPELINE_OUTPUT, ...)
+    message: "LLM02: Code Injection - Pipeline output flows into code execution functions without sanitization"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "pipeline", "huggingface", "taint", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Pipeline output flows into code execution functions (eval, exec, compile). If the pipeline generates code or code-like output, this can lead to arbitrary code execution."
+      remediation: "NEVER execute pipeline output as code. Use safe parsing methods, validation, and structured output formats. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_code_injection.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/94.html"
+    paths:
+      include:
+        - "*.py"

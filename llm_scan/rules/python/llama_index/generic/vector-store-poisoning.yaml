@@ -1,0 +1,161 @@
+rules:
+  # ============================================================================
+  # LLM01/LLM03: Vector Store & Index Vulnerabilities
+  # ============================================================================
+  # Detects vulnerabilities in vector store and index operations that can lead to
+  # prompt injection or training data poisoning
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules llamaindex-llm01-index-user-input \
+  #     --ai-analyze-rules llamaindex-llm03-index-untrusted-data \
+  #     --ai-analyze-rules llamaindex-llm01-index-results-to-prompt
+  #
+  # OWASP: LLM01, LLM03
+  # CWE: CWE-79, CWE-94, CWE-502
+  # ============================================================================
+
+  - id: llamaindex-llm01-index-user-input
+    patterns:
+      - pattern-either:
+          # Index query with user input
+          - pattern: |
+              $INDEX.query($USER_INPUT)
+          - pattern: |
+              $INDEX.retrieve($USER_INPUT)
+          - pattern: |
+              VectorStoreIndex.from_documents(...).query($USER_INPUT)
+          - pattern: |
+              $INDEX = VectorStoreIndex.from_documents(...)
+              ...
+              $INDEX.query($USER_INPUT)
+          - pattern: |
+              PropertyGraphIndex.from_documents(...).query($USER_INPUT)
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: (request\.|input\(|sys\.argv|getenv|environ|args|kwargs|params|query|body|form|json|data|user_input|user_input_text|user_message|user_prompt|prompt_text|raw_input|raw_prompt|user_data|user_content|user_query|query|question)
+    message: "LLM01: Potential Prompt Injection - Index query with user input"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Index)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "index", "vector-store", "llamaindex", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - depends on how results are used
+      impact: "high"
+      likelihood: "medium"  # AI will assess based on result usage
+      description: "Index is queried with user input. If the retrieved documents are injected into prompts without sanitization, this can enable indirect prompt injection. AI analysis will determine if the search results are used unsafely in prompts."
+      remediation: "Validate and sanitize user queries before index queries. Sanitize retrieved document content before including in prompts. Use delimiters to separate retrieved content from instructions. Implement content filtering for retrieved documents."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_vector_store.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm03-index-untrusted-data
+    patterns:
+      - pattern-either:
+          # Index created from untrusted documents
+          - pattern: |
+              VectorStoreIndex.from_documents($DOCUMENTS, ...)
+          - pattern: |
+              $INDEX = VectorStoreIndex.from_documents($DOCUMENTS, ...)
+          - pattern: |
+              PropertyGraphIndex.from_documents($DOCUMENTS, ...)
+          - pattern: |
+              $INDEX = PropertyGraphIndex.from_documents($DOCUMENTS, ...)
+      - pattern-inside: |
+          $DOCUMENTS = ...
+          ...
+          VectorStoreIndex.from_documents($DOCUMENTS, ...)
+      - metavariable-regex:
+          metavariable: $DOCUMENTS
+          regex: (requests\.|urlopen|urllib|get\(|\.text|\.content|read\(|fetch|download|user|untrusted|external|third_party|SimpleDirectoryReader|WebPageReader|PyPDFReader|load_data)
+    message: "LLM03: Training Data Poisoning - Index created from untrusted document sources"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: training-data-poisoning
+      owasp: "LLM03"
+      owasp-title: "Training Data Poisoning"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM03.html"
+      cwe: ["CWE-502"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/502.html"]
+      tags: ["owasp", "llm03", "training-data-poisoning", "index", "vector-store", "llamaindex", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - depends on data source
+      impact: "high"
+      likelihood: "medium"  # AI will assess data source trustworthiness
+      description: "Index is created from potentially untrusted document sources (web requests, external files, user input, document loaders). This can lead to training data poisoning where malicious content is embedded in the index and later retrieved into prompts. AI analysis will determine if the data source is actually untrusted."
+      remediation: "Validate and sanitize all documents before adding to indexes. Use trusted document sources only. Implement content filtering and validation for external data. Verify data integrity and authenticity before embedding."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_vector_store.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"
+
+  - id: llamaindex-llm01-index-results-to-prompt
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          $INDEX.query(...)
+      - pattern: |
+          $INDEX.retrieve(...)
+      - pattern: |
+          $VECTOR_STORE.query(...)
+      - pattern: |
+          $VECTOR_STORE.retrieve(...)
+      - pattern: |
+          $INDEX.as_query_engine().query(...)
+    pattern-sinks:
+      - pattern: |
+          $LLM.chat(...)
+      - pattern: |
+          $LLM.complete(...)
+      - pattern: |
+          openai.ChatCompletion.create(...)
+      - pattern: |
+          $CLIENT.chat.completions.create(...)
+      - pattern: |
+          f"...{$INDEX_RESULT}..."
+      - pattern: |
+          "..." + $INDEX_RESULT + "..."
+    message: "LLM01: Indirect Prompt Injection - Index query results flow into LLM prompts without sanitization"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection (Indirect)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "indirect-injection", "index", "llamaindex", "taint", "ai-enhanced"]
+      technology: ["python", "llamaindex", "llm"]
+      confidence: "medium"  # Medium confidence - depends on sanitization
+      impact: "high"
+      likelihood: "medium"  # AI will assess if sanitization is present
+      description: "Index query results flow into LLM prompts or API calls. If the index contains poisoned or malicious content, this enables indirect prompt injection. AI analysis will determine if the retrieved content is properly sanitized before use in prompts."
+      remediation: "Sanitize all index query results before including in prompts. Use delimiters to separate retrieved content from instructions. Implement content filtering and validation for query results. Treat all retrieved content as potentially malicious."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/llamaindex_vector_store.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    paths:
+      include:
+        - "*.py"

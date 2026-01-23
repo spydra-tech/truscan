@@ -1,0 +1,64 @@
+rules:
+  # ============================================================================
+  # LLM03: Training Data Poisoning
+  # ============================================================================
+  # Detects vulnerabilities where models are trained with untrusted data sources
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules huggingface-llm03-untrusted-training-data
+  #
+  # OWASP: LLM03
+  # CWE: CWE-502
+  # ============================================================================
+
+  - id: huggingface-llm03-untrusted-training-data
+    mode: taint
+    pattern-sources:
+      # Untrusted training data sources
+      - pattern: |
+          requests.get(...).text
+      - pattern: |
+          urllib.request.urlopen(...).read()
+      - pattern: |
+          flask.request.files.get(...)
+      - pattern: |
+          input(...)
+      - pattern: |
+          sys.argv[...]
+    pattern-sinks:
+      - pattern: |
+          Trainer(train_dataset=$UNTRUSTED_DATA, ...)
+      - pattern: |
+          Trainer(..., train_dataset=$UNTRUSTED_DATA, ...)
+      - pattern: |
+          $MODEL.train($UNTRUSTED_DATA, ...)
+      - pattern: |
+          $MODEL.fit($UNTRUSTED_DATA, ...)
+    message: "LLM03: Training Data Poisoning - Model trained with untrusted data sources"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: training-data-poisoning
+      owasp: "LLM03"
+      owasp-title: "Training Data Poisoning"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM03.html"
+      cwe: ["CWE-502"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/502.html"]
+      tags: ["owasp", "llm03", "training-data-poisoning", "trainer", "huggingface", "taint", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "medium"  # Medium confidence - depends on data source
+      impact: "high"
+      likelihood: "medium"  # AI will assess data source trustworthiness
+      description: "Model is trained with potentially untrusted data sources (web requests, user files, external URLs). This can lead to training data poisoning where malicious content influences model behavior. AI analysis will determine if the data source is actually untrusted."
+      remediation: "Validate and sanitize all training data before use. Use trusted data sources only. Implement content filtering and validation for external data. Verify data integrity and authenticity before training. Use data provenance tracking."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_training_poisoning.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/502.html"
+    paths:
+      include:
+        - "*.py"

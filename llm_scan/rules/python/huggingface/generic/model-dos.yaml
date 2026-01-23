@@ -1,0 +1,107 @@
+rules:
+  # ============================================================================
+  # LLM04: Model Denial of Service
+  # ============================================================================
+  # Detects missing rate limiting and token limits in Hugging Face pipelines
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules huggingface-llm04-pipeline-no-token-limit
+  #
+  # OWASP: LLM04
+  # CWE: CWE-400, CWE-770
+  # ============================================================================
+
+  - id: huggingface-llm04-pipeline-no-token-limit
+    patterns:
+      - pattern-either:
+          # Text generation pipeline without max_length or max_new_tokens
+          - pattern: |
+              pipeline("text-generation", ...)
+          - pattern: |
+              pipeline("text2text-generation", ...)
+          - pattern: |
+              TextGenerationPipeline(...)
+      - pattern-not-inside: |
+          pipeline("text-generation", max_length=..., ...)
+      - pattern-not-inside: |
+          pipeline("text-generation", ..., max_length=...)
+      - pattern-not-inside: |
+          pipeline("text-generation", max_new_tokens=..., ...)
+      - pattern-not-inside: |
+          pipeline("text-generation", ..., max_new_tokens=...)
+      - pattern-not-inside: |
+          TextGenerationPipeline(..., max_length=...)
+      - pattern-not-inside: |
+          TextGenerationPipeline(..., max_new_tokens=...)
+    message: "LLM04: Model Denial of Service - Text generation pipeline without max_length or max_new_tokens limit"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: denial-of-service
+      owasp: "LLM04"
+      owasp-title: "Model Denial of Service"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM04.html"
+      cwe: ["CWE-400", "CWE-770"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/400.html", "https://cwe.mitre.org/data/definitions/770.html"]
+      tags: ["owasp", "llm04", "dos", "denial-of-service", "token-limit", "pipeline", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "medium"  # Medium confidence - may be configured elsewhere
+      impact: "medium"
+      likelihood: "medium"  # AI will assess if limits are configured elsewhere
+      description: "Text generation pipeline is created without max_length or max_new_tokens limit. Without token limits, malicious or large inputs can exhaust resources and cause denial of service. AI analysis will determine if limits are configured elsewhere or if this is actually vulnerable."
+      remediation: "Always set max_length or max_new_tokens limit when creating text generation pipelines. Implement rate limiting for pipeline endpoints. Monitor resource usage and set appropriate quotas. Use streaming responses for large outputs."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_model_dos.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/400.html"
+    paths:
+      include:
+        - "*.py"
+
+  - id: huggingface-llm04-model-no-token-limit
+    patterns:
+      - pattern-either:
+          # Model generation without max_length or max_new_tokens
+          - pattern: |
+              $MODEL.generate(...)
+          - pattern: |
+              $MODEL(**$INPUTS)
+      - pattern-not-inside: |
+          $MODEL.generate(..., max_length=..., ...)
+      - pattern-not-inside: |
+          $MODEL.generate(..., max_new_tokens=..., ...)
+      - pattern-not-inside: |
+          $MODEL.generate(..., ..., max_length=...)
+      - pattern-not-inside: |
+          $MODEL.generate(..., ..., max_new_tokens=...)
+    message: "LLM04: Model Denial of Service - Model generation without max_length or max_new_tokens limit"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: denial-of-service
+      owasp: "LLM04"
+      owasp-title: "Model Denial of Service"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM04.html"
+      cwe: ["CWE-400", "CWE-770"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/400.html", "https://cwe.mitre.org/data/definitions/770.html"]
+      tags: ["owasp", "llm04", "dos", "denial-of-service", "token-limit", "model", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "medium"  # Medium confidence - may be configured elsewhere
+      impact: "medium"
+      likelihood: "medium"  # AI will assess if limits are configured elsewhere
+      description: "Model generation is called without max_length or max_new_tokens limit. Without token limits, malicious or large inputs can exhaust resources and cause denial of service. AI analysis will determine if limits are configured elsewhere or if this is actually vulnerable."
+      remediation: "Always set max_length or max_new_tokens limit when calling model.generate(). Implement rate limiting for model inference endpoints. Monitor resource usage and set appropriate quotas. Use streaming responses for large outputs."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_model_dos.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/400.html"
+    paths:
+      include:
+        - "*.py"

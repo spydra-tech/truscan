@@ -1,0 +1,76 @@
+rules:
+  # ============================================================================
+  # LLM02: Insecure Output Handling - SQL Injection (Anthropic Generic)
+  # ============================================================================
+  # Detects LLM output used in SQL queries without parameterization
+  # OWASP: LLM02
+  # CWE: CWE-89
+  # ============================================================================
+
+  - id: anthropic-sql-injection-string-format
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = anthropic.Anthropic().messages.create(...)
+          - pattern: |
+              $RESPONSE = $CLIENT.messages.create(...)
+      - pattern-inside: |
+          $QUERY = $RESPONSE.content[0].text
+          ...
+      - pattern-either:
+          # f-strings
+          - pattern: |
+              $DB.execute(f"...{$QUERY}...")
+          - pattern: |
+              $CURSOR.execute(f"...{$QUERY}...")
+          - pattern: |
+              $SESSION.execute(f"...{$QUERY}...")
+          # String concatenation
+          - pattern: |
+              $DB.execute("..." + $QUERY + "...")
+          - pattern: |
+              $CURSOR.execute("..." + $QUERY + "...")
+          # .format() method
+          - pattern: |
+              $DB.execute("...{}...".format($QUERY))
+          - pattern: |
+              $CURSOR.execute("...{}...".format($QUERY))
+          # % formatting
+          - pattern: |
+              $DB.execute("...%s..." % $QUERY)
+          - pattern: |
+              $CURSOR.execute("...%s..." % $QUERY)
+          # Template strings with named params
+          - pattern: |
+              $DB.execute("...{query}...".format(query=$QUERY))
+          - pattern: |
+              $CURSOR.execute("...{query}...".format(query=$QUERY))
+    message: "LLM02: Insecure Output Handling - Anthropic output concatenated into SQL query (SQL injection risk)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: sql-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-89"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/89.html"]
+      tags: ["owasp", "llm02", "insecure-output", "sql-injection", "llm", "ai-security", "anthropic", "string-concatenation"]
+      technology: ["python", "anthropic", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "Anthropic output is concatenated into SQL queries using string formatting (f-strings, +, .format(), %), allowing SQL injection attacks. This pattern is always dangerous regardless of validation. Detects multiple string formatting methods."
+      remediation: "Use parameterized queries with placeholders. Never concatenate user input or LLM output into SQL queries."
+      examples:
+        vulnerable: "samples/llm02_insecure_output.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://owasp.org/www-community/attacks/SQL_Injection"
+        - "https://cwe.mitre.org/data/definitions/89.html"
+    paths:
+      include:
+        - "*.py"

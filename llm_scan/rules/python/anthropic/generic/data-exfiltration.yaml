@@ -1,0 +1,59 @@
+rules:
+  # ============================================================================
+  # LLM07/LLM02: Data Exfiltration & Indirect Injection (Anthropic Generic)
+  # ============================================================================
+
+  - id: anthropic-indirect-prompt-injection
+    mode: taint
+    pattern-sources:
+      # Flask request data
+      - pattern: flask.request.args.get(...)
+      - pattern: flask.request.form.get(...)
+      - pattern: flask.request.get_json(...)
+      # Django request data
+      - pattern: request.GET.get(...)
+      - pattern: request.POST.get(...)
+      # External requests (e.g. fetching URL content)
+      - pattern: requests.get(...).text
+      - pattern: requests.get(...).content
+      - pattern: requests.get(...).json()
+    pattern-sinks:
+      - pattern: anthropic.Anthropic().messages.create(..., messages=...)
+    message: "Potential Indirect Prompt Injection: Untrusted external data flows into LLM prompt"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: injection
+      owasp: "LLM01"
+      cwe: ["CWE-79", "CWE-94"]
+      tags: ["prompt-injection", "indirect-injection", "anthropic", "llm", "taint"]
+      confidence: "medium"
+      impact: "high"
+      likelihood: "medium"
+      description: "Data from an untrusted source (web request, external API) is passed directly to the LLM prompt. This allows for Indirect Prompt Injection, where the external content contains hidden instructions to manipulate the LLM."
+      remediation: "Sanitize and validate external content. Use delimiters to separate data from instructions. Treat all external content as potentially malicious."
+
+  - id: anthropic-data-exfiltration-via-tool
+    mode: taint
+    pattern-sources:
+      - pattern: anthropic.Anthropic().messages.create(...)
+      - pattern: anthropic.Anthropic().messages.create(...)
+    pattern-sinks:
+      - pattern: requests.post(..., data=...)
+      - pattern: requests.post(..., json=...)
+      - pattern: urllib.request.urlopen(...)
+    message: "Potential Data Exfiltration: LLM output sent to network sink"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: exfiltration
+      owasp: "LLM02"
+      cwe: ["CWE-200"]
+      tags: ["data-exfiltration", "ssrf", "anthropic", "llm", "taint"]
+      confidence: "medium"
+      impact: "high"
+      likelihood: "medium"
+      description: "LLM output is directly sent to a network sink (HTTP POST). If the LLM is compromised via Prompt Injection, this allows an attacker to exfiltrate sensitive data or perform SSRF."
+      remediation: "Validate the destination URL (allowlist). Do not send raw LLM output to arbitrary endpoints. Review the data being sent."

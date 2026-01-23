@@ -1,0 +1,62 @@
+rules:
+  # ============================================================================
+  # LLM09: Overreliance - Missing Output Validation
+  # ============================================================================
+  # Detects vulnerabilities where pipeline output is used in critical operations
+  # without validation
+  # 
+  # Usage with AI:
+  #   python -m llm_scan.runner . --enable-ai-filter \
+  #     --ai-analyze-rules huggingface-llm09-pipeline-output-no-validation
+  #
+  # OWASP: LLM09
+  # CWE: CWE-20
+  # ============================================================================
+
+  - id: huggingface-llm09-pipeline-output-no-validation
+    patterns:
+      - pattern-either:
+          # Pipeline output used in critical operations without validation
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              eval($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              exec($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              subprocess.run($RESPONSE)
+          - pattern: |
+              $RESPONSE = pipeline(...)
+              ...
+              $CURSOR.execute($RESPONSE)
+    message: "LLM09: Overreliance - Pipeline output used in critical operations without validation"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: overreliance
+      owasp: "LLM09"
+      owasp-title: "Overreliance"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM09.html"
+      cwe: ["CWE-20"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/20.html"]
+      tags: ["owasp", "llm09", "overreliance", "validation", "pipeline", "huggingface", "ai-enhanced"]
+      technology: ["python", "huggingface", "transformers", "llm"]
+      confidence: "medium"  # Medium confidence - depends on validation presence
+      impact: "high"
+      likelihood: "medium"  # AI will assess if validation is present
+      description: "Pipeline output is used in critical operations (code execution, command execution, SQL) without validation. Blind trust in pipeline output can lead to security vulnerabilities. AI analysis will determine if validation is present."
+      remediation: "Always validate pipeline output before using in critical operations. Implement output filtering, sanitization, and allowlisting. Use structured output formats with schema validation. Never blindly trust pipeline output."
+      ai_analysis_recommended: true
+      examples:
+        vulnerable: "samples/huggingface_overreliance.py"
+      references:
+        - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        - "https://cwe.mitre.org/data/definitions/20.html"
+    paths:
+      include:
+        - "*.py"
