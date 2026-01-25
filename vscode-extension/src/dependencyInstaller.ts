@@ -216,10 +216,14 @@ export class DependencyInstaller {
 
     /**
      * Check and install all required dependencies
+     * @param pythonPath - Path to Python interpreter
+     * @param progress - Progress callback
+     * @param installLlmScan - Whether to install llm-scan (optional). semgrep is always installed.
      */
     async checkAndInstallDependencies(
         pythonPath: string,
-        progress?: (message: string) => void
+        progress?: (message: string) => void,
+        installLlmScan: boolean = true
     ): Promise<InstallResult> {
         const result: InstallResult = {
             success: true,
@@ -247,14 +251,15 @@ export class DependencyInstaller {
 
         progress?.('Checking Python dependencies...');
 
-        // Check semgrep
+        // Always check and install semgrep (required dependency)
         const semgrepInstalled = await this.checkPackageInstalled(effectivePythonPath, 'semgrep');
         if (!semgrepInstalled) {
-            progress?.('Installing semgrep...');
+            progress?.('Installing semgrep (required dependency)...');
             const semgrepResult = await this.installPackage(effectivePythonPath, 'semgrep');
             
             if (semgrepResult.success) {
                 result.installed.push('semgrep');
+                progress?.('semgrep installed successfully');
             } else if (semgrepResult.externallyManaged) {
                 // Externally managed environment - create venv
                 progress?.('Detected externally-managed Python environment. Creating virtual environment...');
@@ -277,14 +282,16 @@ export class DependencyInstaller {
                     venvCreated = true;
                     progress?.('Virtual environment created. Installing dependencies...');
                     
-                    // Retry semgrep installation in venv
+                    // Retry semgrep installation in venv (REQUIRED)
+                    progress?.('Installing semgrep in virtual environment...');
                     const retryResult = await this.installPackage(effectivePythonPath, 'semgrep');
                     if (retryResult.success) {
                         result.installed.push('semgrep');
+                        progress?.('✓ semgrep installed in virtual environment');
                     } else {
                         result.failed.push('semgrep');
                         result.success = false;
-                        result.message += `Failed to install semgrep in virtual environment: ${retryResult.error}\n`;
+                        result.message += `Failed to install semgrep (required dependency) in virtual environment: ${retryResult.error}\n`;
                     }
                 } else {
                     result.failed.push('semgrep');
@@ -295,45 +302,57 @@ export class DependencyInstaller {
             } else {
                 result.failed.push('semgrep');
                 result.success = false;
-                result.message += `Failed to install semgrep: ${semgrepResult.error}\n`;
+                result.message += `Failed to install semgrep (required dependency): ${semgrepResult.error}\n` +
+                    `Please install manually: ${effectivePythonPath} -m pip install semgrep\n`;
             }
+        } else {
+            progress?.('✓ semgrep is already installed');
         }
 
-        // Check llm_scan
-        const llmScanInstalled = await this.checkPackageInstalled(effectivePythonPath, 'llm-scan');
-        if (!llmScanInstalled) {
-            progress?.('Installing llm-scan...');
-            
-            // Try to find project root for local installation
-            const projectRoot = this.findProjectRoot();
-            
-            if (projectRoot) {
-                // Install from local path
-                const installResult = await this.installPackage(effectivePythonPath, 'llm-scan', projectRoot);
-                if (installResult.success) {
-                    result.installed.push('llm-scan (from local source)');
-                } else if (installResult.externallyManaged && !venvCreated) {
-                    // Should not happen if we already created venv, but handle it
-                    result.failed.push('llm-scan');
-                    result.success = false;
-                    result.message += `Failed to install llm-scan: Externally-managed environment detected. Please create a virtual environment manually.\n`;
+        // Check llm_scan (optional - only if installLlmScan is true)
+        // Note: semgrep is always installed above (required), llm-scan is optional
+        if (installLlmScan) {
+            const llmScanInstalled = await this.checkPackageInstalled(effectivePythonPath, 'llm-scan');
+            if (!llmScanInstalled) {
+                progress?.('Installing llm-scan (optional - can be installed manually if needed)...');
+                
+                // Try to find project root for local installation
+                const projectRoot = this.findProjectRoot();
+                
+                if (projectRoot) {
+                    // Install from local path
+                    const installResult = await this.installPackage(effectivePythonPath, 'llm-scan', projectRoot);
+                    if (installResult.success) {
+                        result.installed.push('llm-scan (from local source)');
+                        progress?.('✓ llm-scan installed from local source');
+                    } else if (installResult.externallyManaged && !venvCreated) {
+                        // Should not happen if we already created venv, but handle it
+                        result.failed.push('llm-scan');
+                        // Don't mark as failure - llm-scan is optional, semgrep is required
+                        result.message += `Note: llm-scan installation failed (optional). You can install manually if needed.\n`;
+                    } else {
+                        result.failed.push('llm-scan');
+                        // Don't mark as failure - llm-scan is optional
+                        result.message += `Note: llm-scan installation failed (optional): ${installResult.error}\n`;
+                    }
                 } else {
-                    result.failed.push('llm-scan');
-                    result.success = false;
-                    result.message += `Failed to install llm-scan from local source: ${installResult.error}\n`;
+                    // Try installing from PyPI (if published)
+                    const installResult = await this.installPackage(effectivePythonPath, 'llm-scan');
+                    if (installResult.success) {
+                        result.installed.push('llm-scan (from PyPI)');
+                        progress?.('✓ llm-scan installed from PyPI');
+                    } else {
+                        result.failed.push('llm-scan');
+                        // Don't mark as failure - llm-scan is optional
+                        result.message += `Note: llm-scan not found in PyPI (optional). Install manually if needed:\n` +
+                            `  ${effectivePythonPath} -m pip install -e /path/to/code-scan2\n`;
+                    }
                 }
             } else {
-                // Try installing from PyPI (if published)
-                const installResult = await this.installPackage(effectivePythonPath, 'llm-scan');
-                if (installResult.success) {
-                    result.installed.push('llm-scan (from PyPI)');
-                } else {
-                    result.failed.push('llm-scan');
-                    result.success = false;
-                    result.message += `Failed to install llm-scan. Please install manually:\n` +
-                        `  ${effectivePythonPath} -m pip install -e /path/to/code-scan2\n`;
-                }
+                progress?.('✓ llm-scan is already installed');
             }
+        } else {
+            progress?.('Skipping llm-scan installation (autoInstallDependencies is disabled)');
         }
 
         if (venvCreated) {
@@ -345,7 +364,16 @@ export class DependencyInstaller {
         } else if (result.installed.length > 0) {
             result.message = `Successfully installed: ${result.installed.join(', ')}`;
         } else if (result.failed.length === 0) {
-            result.message = 'All dependencies are already installed';
+            result.message = 'All dependencies are already installed (semgrep is ready)';
+        }
+        
+        // If semgrep failed but llm-scan succeeded, still mark as partial success
+        // semgrep is required, llm-scan is optional
+        if (result.failed.includes('semgrep')) {
+            result.success = false; // semgrep failure is critical
+        } else if (result.failed.includes('llm-scan') && result.installed.includes('semgrep')) {
+            // semgrep succeeded, llm-scan failed - this is okay
+            result.success = true;
         }
 
         return result;

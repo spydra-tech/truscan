@@ -2,10 +2,11 @@
 
 All notable changes to the LLM Security Scanner VS Code Extension will be documented in this file.
 
-## [1.0.0] - 2024-01-16
+## [1.0.0] - 2024-01-23
 
 ### Added
 - Initial release
+- **Automatic semgrep installation** - No manual setup required! semgrep is automatically installed when you install the extension
 - Automatic file scanning on save and open
 - Workspace scanning support
 - Real-time diagnostics in Problems panel
@@ -15,6 +16,7 @@ All notable changes to the LLM Security Scanner VS Code Extension will be docume
 - Command palette integration
 - Progress indicators for workspace scans
 - Diagnostic caching for performance
+- Virtual environment creation for externally-managed Python environments
 
 ### Features
 - **Automatic Scanning**: Files are scanned automatically when saved or opened

@@ -46,14 +46,18 @@ Then install the `.vsix` file in VS Code:
 
 - VS Code 1.74.0 or higher
 - Python 3.11+ 
-- **Automatic Installation**: The extension automatically installs required Python dependencies (`semgrep` and `llm-scan`) on first activation
-- **Manual Installation** (optional): If automatic installation fails, see instructions below
+- **No manual installation needed!** The extension automatically installs all required dependencies:
+  - **semgrep**: Always installed automatically (required dependency)
+  - **llm-scan**: Installed automatically if available in workspace, or from PyPI
 
 ### Automatic Dependency Installation
 
-The extension automatically checks and installs required Python dependencies when activated:
-- **semgrep**: Static analysis engine
-- **llm-scan**: The scanner package (installed from local source if available, or from PyPI)
+**semgrep is automatically installed** when you install the extension - you don't need to install it manually!
+
+The extension automatically:
+- **Installs semgrep** (required dependency) - always installed automatically
+- **Installs llm-scan** (if available in workspace or from PyPI)
+- **Creates a virtual environment** if your Python environment is externally-managed (e.g., system Python on Linux)
 
 This happens automatically in the background with a progress notification. You can disable this by setting `llmSecurityScanner.autoInstallDependencies` to `false` in settings.
 

@@ -1,15 +1,24 @@
 {
   "name": "llm-security-scanner",
   "displayName": "LLM Security Scanner",
-  "description": "Detect AI/LLM-specific security vulnerabilities in your code",
+  "description": "Detect AI/LLM-specific security vulnerabilities in your code. Automatically installs semgrep - no manual setup required!",
   "version": "1.0.0",
-  "publisher": "llm-security",
+  "publisher": "spydra",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/code-scan2.git"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/your-org/code-scan2",
+  "bugs": {
+    "url": "https://github.com/your-org/code-scan2/issues"
+  },
   "engines": {
     "vscode": "^1.74.0"
   },
   "categories": [
     "Linters",
-    "Security"
+    "Other"
   ],
   "keywords": [
     "security",
@@ -87,7 +96,7 @@
         "llmSecurityScanner.autoInstallDependencies": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically install Python dependencies (semgrep, llm-scan) on extension activation"
+          "description": "Automatically install llm-scan on extension activation. Note: semgrep is ALWAYS installed automatically (required dependency) regardless of this setting. This setting only controls whether to also install llm-scan."
         }
       }
     },

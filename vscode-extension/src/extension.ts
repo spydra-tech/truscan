@@ -19,71 +19,73 @@ export async function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('llmSecurityScanner');
     const autoInstall = config.get<boolean>('autoInstallDependencies', true);
 
-    // Check and install dependencies if enabled
-    if (autoInstall) {
-        const installer = new DependencyInstaller();
-        
-        // Check dependencies first (quick check)
-        const checkResult = await installer.checkDependencies(pythonPath);
-        
-        if (!checkResult.allInstalled) {
-            // Show progress notification and install
-            vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: 'LLM Security Scanner: Installing dependencies...',
-                    cancellable: false
-                },
-                async (progress) => {
-                    try {
-                        progress.report({ increment: 0, message: 'Checking dependencies...' });
-                        
-                        const installResult = await installer.checkAndInstallDependencies(
-                            pythonPath,
-                            (message) => progress.report({ message })
-                        );
+    // ALWAYS install semgrep (required dependency) - regardless of autoInstall setting
+    // The autoInstall setting only controls whether to also install llm-scan
+    const installer = new DependencyInstaller();
+    
+    // Always check and install semgrep (required)
+    vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'LLM Security Scanner: Installing required dependencies...',
+            cancellable: false
+        },
+        async (progress) => {
+            try {
+                progress.report({ increment: 0, message: 'Checking semgrep (required dependency)...' });
+                
+                const installResult = await installer.checkAndInstallDependencies(
+                    pythonPath,
+                    (message) => progress.report({ message }),
+                    autoInstall // Pass autoInstall flag to control llm-scan installation
+                );
 
-                        if (installResult.success) {
-                            // If virtual environment was created, update Python path setting
-                            if (installResult.pythonPath && installResult.venvPath) {
-                                const config = vscode.workspace.getConfiguration('llmSecurityScanner');
-                                await config.update('pythonPath', installResult.pythonPath, vscode.ConfigurationTarget.Workspace);
-                                
-                                vscode.window.showInformationMessage(
-                                    `LLM Security Scanner: ${installResult.message}`,
-                                    'OK'
-                                );
-                            } else if (installResult.installed.length > 0) {
-                                vscode.window.showInformationMessage(
-                                    `LLM Security Scanner: ${installResult.message}`,
+                if (installResult.success) {
+                    // If virtual environment was created, update Python path setting
+                    if (installResult.pythonPath && installResult.venvPath) {
+                        const config = vscode.workspace.getConfiguration('llmSecurityScanner');
+                        await config.update('pythonPath', installResult.pythonPath, vscode.ConfigurationTarget.Workspace);
+                        
+                        vscode.window.showInformationMessage(
+                            `LLM Security Scanner: ${installResult.message}`,
+                            'OK'
+                        );
+                    } else if (installResult.installed.length > 0) {
+                        vscode.window.showInformationMessage(
+                            `LLM Security Scanner: ${installResult.message}`,
+                            'OK'
+                        );
+                    }
+                } else {
+                    // Check if semgrep failed (critical) vs llm-scan failed (non-critical)
+                    if (installResult.failed.includes('semgrep')) {
+                        vscode.window.showErrorMessage(
+                            `LLM Security Scanner: Failed to install semgrep (required dependency). ${installResult.message}`,
+                            'View Details'
+                        ).then(selection => {
+                            if (selection === 'View Details') {
+                                vscode.window.showWarningMessage(
+                                    `Failed to install semgrep (required). Please install manually:\n` +
+                                    `${pythonPath} -m pip install semgrep`,
                                     'OK'
                                 );
                             }
-                        } else {
-                            vscode.window.showErrorMessage(
-                                `LLM Security Scanner: Failed to install some dependencies. ${installResult.message}`,
-                                'View Details'
-                            ).then(selection => {
-                                if (selection === 'View Details') {
-                                    vscode.window.showWarningMessage(
-                                        `Failed to install: ${installResult.failed.join(', ')}\n\n` +
-                                        `Please install manually:\n` +
-                                        `${pythonPath} -m pip install semgrep\n` +
-                                        `${pythonPath} -m pip install -e /path/to/code-scan2`,
-                                        'OK'
-                                    );
-                                }
-                            });
-                        }
-                    } catch (error: any) {
-                        vscode.window.showErrorMessage(
-                            `LLM Security Scanner: Error installing dependencies: ${error.message}`
+                        });
+                    } else {
+                        // Only llm-scan failed, which is optional
+                        vscode.window.showInformationMessage(
+                            `LLM Security Scanner: semgrep installed successfully. ${installResult.message}`,
+                            'OK'
                         );
                     }
                 }
-            );
+            } catch (error: any) {
+                vscode.window.showErrorMessage(
+                    `LLM Security Scanner: Error installing dependencies: ${error.message}`
+                );
+            }
         }
-    }
+    );
 
     // Initialize components
     diagnosticCollection = vscode.languages.createDiagnosticCollection('llm-security');
@@ -155,7 +157,8 @@ export async function activate(context: vscode.ExtensionContext) {
                         
                         const installResult = await installer.checkAndInstallDependencies(
                             pythonPath,
-                            (message) => progress.report({ message })
+                            (message) => progress.report({ message }),
+                            true // Always install llm-scan when manually triggered
                         );
 
                         if (installResult.success) {
