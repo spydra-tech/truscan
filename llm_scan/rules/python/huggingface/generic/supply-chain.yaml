@@ -57,7 +57,7 @@ rules:
       likelihood: "high"
       description: "Model is loaded without explicitly using safetensors format. PyTorch uses pickle as the default serialization format, which allows arbitrary code execution during deserialization. Loading untrusted pickle files can result in RCE. CVE-2025-14921, CVE-2025-14924, CVE-2025-14926 (CVSS 8.8). Always use use_safetensors=True or ensure models are in safetensors format."
       remediation: "Always use safetensors format for model loading. Set use_safetensors=True when loading models. Use pipeline(model=$MODEL, use_safetensors=True) or AutoModel.from_pretrained($MODEL, use_safetensors=True). Verify models are in safetensors format before loading. Never load pickle models from untrusted sources."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_pickle_deserialization.py"
       references:
@@ -66,7 +66,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/494.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: huggingface-llm05-trust-remote-code
     patterns:
@@ -105,7 +105,7 @@ rules:
       likelihood: "high"
       description: "trust_remote_code=True is used with potentially untrusted model source. This parameter allows execution of custom modeling files from repositories, creating a code injection risk. If the model source is user-controlled or untrusted, this can lead to arbitrary code execution."
       remediation: "Never use trust_remote_code=True with untrusted model sources. Always verify the content of modeling files before using this argument. Set a specific revision to protect against repository updates. Only use trust_remote_code=True with models from trusted sources. Consider using safetensors format instead."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_trust_remote_code.py"
       references:
@@ -114,7 +114,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/494.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: huggingface-llm05-untrusted-model-source
     mode: taint
@@ -163,7 +163,7 @@ rules:
       likelihood: "high"
       description: "Model is loaded from an untrusted source (user input, external URL, environment variable). Loading models from untrusted sources can lead to supply chain attacks, malicious models, and arbitrary code execution (especially with pickle format)."
       remediation: "Never load models from untrusted sources. Use allowlisted model identifiers from trusted repositories. Validate and sanitize model paths/URLs. Use signed commits for verification. Prefer models from official Hugging Face Hub with verified signatures."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_untrusted_model.py"
       references:
@@ -172,7 +172,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/494.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: huggingface-llm05-torch-load-pickle
     patterns:
@@ -204,7 +204,7 @@ rules:
       likelihood: "high"
       description: "Direct torch.load() or pickle.load() is used to load model files. These functions deserialize pickle format, which allows arbitrary code execution during deserialization. Loading untrusted pickle files can result in RCE."
       remediation: "Never use torch.load() or pickle.load() with untrusted files. Use Hugging Face transformers library with safetensors format instead. If pickle loading is necessary, only load files from trusted sources and verify file integrity. Consider using safetensors format for model serialization."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_torch_load.py"
       references:
@@ -213,4 +213,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/494.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

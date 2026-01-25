@@ -56,7 +56,7 @@ rules:
       likelihood: "medium"  # AI will assess if limits are configured elsewhere
       description: "Query engine is created without max_tokens limit in service context. Without token limits, malicious or large queries can exhaust resources and cause denial of service. AI analysis will determine if limits are configured elsewhere or if this is actually vulnerable."
       remediation: "Always set max_tokens limit in ServiceContext or LLM configuration. Implement rate limiting for query engine endpoints. Monitor resource usage and set appropriate quotas. Use streaming responses for large outputs."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_model_dos.py"
       references:
@@ -64,4 +64,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/400.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

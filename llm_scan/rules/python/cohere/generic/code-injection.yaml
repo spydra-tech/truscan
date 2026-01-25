@@ -45,7 +45,7 @@ rules:
       likelihood: "high"
       description: "Cohere output is passed to eval(), exec(), or compile() functions without validation, allowing arbitrary code execution if the LLM output contains malicious code."
       remediation: "Never execute LLM output as code. Use safe parsing and validation instead. Use AST parsing, whitelisted operations, or structured output formats (JSON, YAML) instead of code execution."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/cohere_code_injection.py"
       references:
@@ -53,7 +53,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: cohere-code-injection-direct
     patterns:
@@ -120,7 +120,7 @@ rules:
       likelihood: "high"
       description: "Cohere chat or generate output is extracted (from .text, .message.content, or .generations[0].text) and passed directly to eval(), exec(), or compile() functions. This allows arbitrary code execution if the LLM output contains malicious code."
       remediation: "Never execute LLM output as code. Use safe parsing and validation instead. Use AST parsing, whitelisted operations, or structured output formats (JSON, YAML) instead of code execution."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/cohere_code_injection.py"
       references:
@@ -128,4 +128,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

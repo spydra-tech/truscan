@@ -60,7 +60,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/78.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: anthropic-command-injection-shell-true
   patterns:
   - pattern-either:
@@ -116,7 +116,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/78.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-command-injection-subprocess
   patterns:
   - pattern-either:
@@ -176,7 +176,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/78.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-command-injection-shell
   patterns:
   - pattern-either:
@@ -227,7 +227,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/78.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-subprocess-direct
   pattern-either:
   - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
@@ -298,7 +298,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/78.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-os-system-direct
   pattern-either:
   - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
@@ -369,7 +369,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/78.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-anthropic-subprocess-direct
   pattern: '$RESPONSE = $CLIENT.messages.create(...)
 
@@ -417,4 +417,4 @@ rules:
     - https://cwe.mitre.org/data/definitions/78.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'

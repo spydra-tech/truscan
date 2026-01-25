@@ -62,7 +62,7 @@ rules:
       likelihood: "high"
       description: "LangChain output parser result is passed directly to eval(), exec(), or compile() functions. Output parsers may extract code from LLM responses, and executing it leads to arbitrary code execution."
       remediation: "NEVER execute output parser results as code. Use safe parsing methods, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_output_parser.py"
       references:
@@ -70,7 +70,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm02-output-parser-unsafe-deserialization
     patterns:
@@ -108,7 +108,7 @@ rules:
       likelihood: "medium"  # AI will assess parser type and usage
       description: "Output parser result is used in potentially unsafe deserialization (pickle.loads, yaml.load). If the parser extracts serialized data from LLM output, this can lead to code execution via deserialization attacks. AI analysis will determine if the parser type and usage are vulnerable."
       remediation: "Use safe deserialization methods (json.loads, yaml.safe_load). Never use pickle.loads with untrusted data. Validate parser output before deserialization. Use structured output formats with schema validation."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_output_parser.py"
       references:
@@ -116,4 +116,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/502.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

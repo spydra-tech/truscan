@@ -49,14 +49,14 @@ rules:
       likelihood: "medium"  # AI will assess based on result usage
       description: "User input is used in vector store similarity search. If the retrieved documents are injected into prompts without sanitization, this can enable indirect prompt injection. AI analysis will determine if the search results are used unsafely in prompts."
       remediation: "Validate and sanitize user queries before vector search. Sanitize retrieved document content before including in prompts. Use delimiters to separate retrieved content from instructions. Implement content filtering for retrieved documents."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_vector_store.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm03-vector-store-untrusted-data
     patterns:
@@ -91,14 +91,14 @@ rules:
       likelihood: "medium"  # AI will assess data source trustworthiness
       description: "Vector store is created from potentially untrusted data sources (web requests, external files, user input). This can lead to training data poisoning where malicious content is embedded in the vector store and later retrieved into prompts. AI analysis will determine if the data source is actually untrusted."
       remediation: "Validate and sanitize all data before adding to vector stores. Use trusted data sources only. Implement content filtering and validation for external data. Verify data integrity and authenticity before embedding."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_vector_store.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm01-vector-store-to-prompt
     mode: taint
@@ -138,11 +138,11 @@ rules:
       likelihood: "medium"  # AI will assess if sanitization is present
       description: "Vector store search results flow into LangChain prompts or chains. If the vector store contains poisoned or malicious content, this enables indirect prompt injection. AI analysis will determine if the retrieved content is properly sanitized before use in prompts."
       remediation: "Sanitize all retrieved document content before including in prompts. Use delimiters to separate retrieved content from instructions. Implement content filtering and validation for vector store results. Treat all retrieved content as potentially malicious."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_vector_store.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

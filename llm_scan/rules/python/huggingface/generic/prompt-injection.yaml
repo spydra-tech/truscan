@@ -56,14 +56,14 @@ rules:
       likelihood: "medium"  # AI will assess based on output usage
       description: "Pipeline is executed with user input. If pipeline output is used unsafely (e.g., in prompts, code execution, or system commands), this can enable prompt injection attacks. AI analysis will determine if the pipeline output is used unsafely."
       remediation: "Validate and sanitize user input before pipeline execution. Sanitize pipeline output before using in critical operations. Implement input validation and output filtering. Use delimiters to separate user input from system instructions."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_prompt_injection.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: huggingface-llm01-tokenizer-user-input
     patterns:
@@ -104,14 +104,14 @@ rules:
       likelihood: "medium"  # AI will assess based on token usage
       description: "Tokenizer is executed with user input. If tokenized input is used in prompts or model inference without proper validation, this can enable prompt injection attacks. AI analysis will determine if tokenized input is used unsafely."
       remediation: "Validate and sanitize user input before tokenization. Sanitize tokenized input before using in prompts or model inference. Implement input validation and output filtering. Be aware of tokenizer-based injection techniques."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_prompt_injection.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: huggingface-llm01-pipeline-output-to-prompt
     mode: taint
@@ -149,11 +149,11 @@ rules:
       likelihood: "medium"  # AI will assess if sanitization is present
       description: "Pipeline output flows into another pipeline or prompt construction. If the first pipeline output contains malicious content, this enables indirect prompt injection. AI analysis will determine if the pipeline output is properly sanitized before use."
       remediation: "Sanitize all pipeline output before including in prompts or other pipelines. Use delimiters to separate pipeline output from instructions. Implement content filtering and validation for pipeline results. Treat all pipeline output as potentially malicious."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_prompt_injection.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

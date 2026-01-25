@@ -57,7 +57,7 @@ rules:
       likelihood: "high"
       description: "Hugging Face pipeline output is passed directly to eval() function. Pipeline outputs may contain code or code-like text, and executing it leads to arbitrary code execution."
       remediation: "NEVER execute pipeline output as code. Use safe parsing methods, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_code_injection.py"
       references:
@@ -65,7 +65,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: huggingface-llm02-pipeline-to-exec
     patterns:
@@ -111,7 +111,7 @@ rules:
       likelihood: "high"
       description: "Hugging Face pipeline output is passed directly to exec() or compile() functions. Pipeline outputs may contain code or code-like text, and executing it leads to arbitrary code execution."
       remediation: "NEVER execute pipeline output as code. Use safe parsing methods, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_code_injection.py"
       references:
@@ -119,7 +119,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: huggingface-llm02-pipeline-output-to-code
     mode: taint
@@ -157,7 +157,7 @@ rules:
       likelihood: "high"
       description: "Pipeline output flows into code execution functions (eval, exec, compile). If the pipeline generates code or code-like output, this can lead to arbitrary code execution."
       remediation: "NEVER execute pipeline output as code. Use safe parsing methods, validation, and structured output formats. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_code_injection.py"
       references:
@@ -165,4 +165,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

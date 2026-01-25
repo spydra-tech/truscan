@@ -49,7 +49,7 @@ rules:
       likelihood: "high"
       description: "Cohere chat or generate output flows into command execution functions (subprocess, os.system). If the LLM output contains commands or command-like text, this can lead to arbitrary command execution."
       remediation: "Never execute LLM output as commands. Use safe parsing, validation, and structured output formats. If command execution is needed, use allowlists, parameterized commands, or sandboxed execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/cohere_command_injection.py"
       references:
@@ -57,7 +57,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/78.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: cohere-command-injection-direct
     patterns:
@@ -112,7 +112,7 @@ rules:
       likelihood: "high"
       description: "Cohere chat or generate output is extracted (from .text, .message.content, or .generations[0].text) and passed directly to command execution functions (subprocess, os.system). This allows arbitrary command execution if the LLM output contains malicious commands."
       remediation: "Never execute LLM output as commands. Use safe parsing, validation, and structured output formats. If command execution is needed, use allowlists, parameterized commands, or sandboxed execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/cohere_command_injection.py"
       references:
@@ -120,4 +120,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/78.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

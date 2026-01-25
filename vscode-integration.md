@@ -25,7 +25,7 @@ The scanner provides a library interface (`run_scan_for_vscode`) that accepts a 
 **Fields:**
 - `paths` (required): Array of file or directory paths to scan
 - `rules_dir` (optional): Path to rules directory. Defaults to `llm_scan/rules`
-- `include_patterns` (optional): Glob patterns for files to include (e.g., `["*.py"]`)
+- `include_patterns` (optional): Glob patterns for files to include (e.g., `["**/*.py"]`)
 - `exclude_patterns` (optional): Glob patterns for files to exclude (e.g., `["tests/**"]`)
 - `enabled_rules` (optional): List of rule IDs to enable (if not provided, all rules are enabled)
 - `severity_filter` (optional): Array of severity levels to include in results

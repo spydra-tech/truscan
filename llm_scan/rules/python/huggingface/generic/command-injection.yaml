@@ -53,7 +53,7 @@ rules:
       likelihood: "high"
       description: "Pipeline output flows into command execution functions (subprocess, os.system). If the pipeline generates commands or command-like output, this can lead to arbitrary command execution."
       remediation: "NEVER execute pipeline output as commands. Use safe parsing methods, validation, and structured output formats. If command execution is needed, use allowlists, parameterized commands, or sandboxed execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_command_injection.py"
       references:
@@ -61,4 +61,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/78.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

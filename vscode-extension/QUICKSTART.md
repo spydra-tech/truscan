@@ -84,7 +84,7 @@ Open VS Code settings and configure:
 
 ### No Diagnostics Showing
 
-- Check that file matches include patterns (default: `*.py`)
+- Check that file matches include patterns (default: `**/*.py`)
 - Verify severity filter includes your findings
 - Try manual scan: Command Palette → "LLM Security: Scan Workspace"
 

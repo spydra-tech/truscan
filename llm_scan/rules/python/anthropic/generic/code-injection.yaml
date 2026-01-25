@@ -59,7 +59,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/94.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: anthropic-code-injection-direct
   patterns:
   - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
@@ -135,7 +135,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/94.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-to-eval-complete
   pattern-either:
   - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
@@ -274,7 +274,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/94.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-to-subprocess-complete
   pattern-either:
   - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
@@ -423,7 +423,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/78.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-eval-direct
   pattern-either:
   - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
@@ -494,7 +494,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/94.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-exec-direct
   pattern-either:
   - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
@@ -565,7 +565,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/94.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-compile-direct
   pattern-either:
   - pattern: '$RESPONSE = anthropic.Anthropic().messages.create(...)
@@ -636,7 +636,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/94.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-anthropic-eval-direct
   pattern: '$RESPONSE = $CLIENT.messages.create(...)
 
@@ -684,7 +684,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/94.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-code-injection-eval
   patterns:
   - pattern-either:
@@ -743,7 +743,7 @@ rules:
     - https://cwe.mitre.org/data/definitions/94.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'
 - id: llm-code-injection-eval-direct
   patterns:
   - pattern-either:
@@ -795,4 +795,4 @@ rules:
     - https://cwe.mitre.org/data/definitions/94.html
   paths:
     include:
-    - '*.py'
+    - '**/*.py'

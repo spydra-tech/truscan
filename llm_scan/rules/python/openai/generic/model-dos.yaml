@@ -57,4 +57,4 @@ rules:
     - https://owasp.org/www-community/attacks/Denial_of_Service
   paths:
     include:
-    - '*.py'
+    - '**/*.py'

@@ -35,6 +35,7 @@ class ScanConfig:
     ai_batch_size: int = 10  # Process findings in batches
     ai_cache_enabled: bool = True  # Cache AI responses
     ai_analyze_rules: Optional[List[str]] = None  # Specific rules to analyze (None = all)
+    ai_max_findings: Optional[int] = None  # Maximum number of findings to analyze (None = unlimited)
 
     @classmethod
     def from_dict(cls, data: dict) -> "ScanConfig":
@@ -63,6 +64,7 @@ class ScanConfig:
             ai_batch_size=data.get("ai_batch_size", 10),
             ai_cache_enabled=data.get("ai_cache_enabled", True),
             ai_analyze_rules=data.get("ai_analyze_rules"),
+            ai_max_findings=data.get("ai_max_findings"),
         )
 
     def get_default_rules_dir(self) -> str:

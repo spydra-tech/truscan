@@ -54,7 +54,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/250.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: openai-excessive-agency-directory-deletion
     patterns:
@@ -101,7 +101,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/250.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: openai-excessive-agency-database-write
     patterns:
@@ -151,7 +151,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/250.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: openai-excessive-agency-system-config-write
     patterns:
@@ -215,7 +215,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/250.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: openai-excessive-agency-code-file-write
     patterns:
@@ -278,7 +278,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/250.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: openai-excessive-agency-package-installation
     patterns:
@@ -339,4 +339,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/250.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

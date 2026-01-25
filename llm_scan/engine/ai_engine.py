@@ -168,6 +168,8 @@ class AIEngine:
         logger.info(f"  Using {self.config.ai_provider} model: {self.config.ai_model}")
         logger.info(f"  Confidence threshold: {self.config.ai_confidence_threshold}")
         logger.info(f"  Batch size: {self.config.ai_batch_size}")
+        if self.config.ai_max_findings:
+            logger.info(f"  Max findings limit: {self.config.ai_max_findings} (prioritized by severity)")
 
         # Group findings by file for batch processing
         findings_by_file = defaultdict(list)
@@ -196,12 +198,30 @@ class AIEngine:
                         finding.ai_analysis = verdict
                         analyzed_count += 1
                         
+                        # Log AI analysis details
+                        logger.info(f"    📋 AI Analysis Results:")
+                        logger.info(f"      Verdict: {'False Positive' if verdict.is_false_positive else 'True Positive'}")
+                        logger.info(f"      Confidence: {verdict.confidence:.2f}")
+                        logger.info(f"      Reasoning: {verdict.reasoning}")
+                        
+                        if verdict.suggested_severity:
+                            logger.info(f"      Suggested Severity: {verdict.suggested_severity.value} (original: {finding.severity.value})")
+                        
                         # Apply enhanced remediation if provided
                         if verdict.enhanced_remediation:
                             finding.remediation = verdict.enhanced_remediation
                             finding.source = "ai-enhanced"
                             remediation_enhanced_count += 1
-                            logger.info(f"    ✨ Enhanced remediation provided")
+                            logger.info(f"    ✨ Enhanced Remediation:")
+                            # Log remediation in chunks to avoid overwhelming logs
+                            remediation_lines = verdict.enhanced_remediation.split('\n')
+                            for line in remediation_lines[:10]:  # First 10 lines
+                                logger.info(f"      {line}")
+                            if len(remediation_lines) > 10:
+                                logger.info(f"      ... ({len(remediation_lines) - 10} more lines)")
+                        
+                        if verdict.additional_context:
+                            logger.info(f"    📝 Additional Context: {verdict.additional_context}")
 
                         # Filter if high confidence false positive
                         if (
@@ -210,7 +230,7 @@ class AIEngine:
                         ):
                             finding.ai_filtered = True
                             filtered_count += 1
-                            logger.info(f"    🚫 Filtered as false positive (confidence: {verdict.confidence:.2f})")
+                            logger.info(f"    🚫 Filtered as false positive (confidence: {verdict.confidence:.2f} >= threshold: {self.config.ai_confidence_threshold})")
                         else:
                             logger.info(f"    ✓ Confirmed as true positive (confidence: {verdict.confidence:.2f})")
                             filtered_findings.append(finding)
@@ -264,7 +284,7 @@ class AIEngine:
             rule_confidence = finding.metadata.get("confidence", "medium")
             ai_recommended = finding.metadata.get("ai_analysis_recommended", False)
             
-            logger.debug(
+            logger.info(
                 f"Finding {finding.rule_id} - confidence: {rule_confidence}, "
                 f"ai_recommended: {ai_recommended}"
             )
@@ -285,13 +305,36 @@ class AIEngine:
                 skipped_high_confidence += 1
                 logger.debug(f"Skipping {finding.rule_id} - high confidence, not recommended for AI")
 
+        # Sort by severity (critical, high, medium, low, info) to prioritize important findings
+        severity_order = {
+            Severity.CRITICAL: 0,
+            Severity.HIGH: 1,
+            Severity.MEDIUM: 2,
+            Severity.LOW: 3,
+            Severity.INFO: 4,
+        }
+        filtered.sort(key=lambda f: severity_order.get(f.severity, 99))
+        
+        # Apply maximum limit if configured
+        original_count = len(filtered)
+        if self.config.ai_max_findings and len(filtered) > self.config.ai_max_findings:
+            filtered = filtered[:self.config.ai_max_findings]
+            logger.info(f"  ⚠ Limited to {self.config.ai_max_findings} finding(s) (from {original_count} eligible)")
+            logger.info(f"    Priority: Critical/High severity findings analyzed first")
+        
         if skipped_high_confidence > 0 or skipped_not_in_list > 0:
             logger.info(f"  Filtering summary:")
             if skipped_high_confidence > 0:
                 logger.info(f"    - Skipped {skipped_high_confidence} high confidence finding(s)")
             if skipped_not_in_list > 0:
                 logger.info(f"    - Skipped {skipped_not_in_list} finding(s) not in --ai-analyze-rules")
-            logger.info(f"    - Selected {included_count} finding(s) for AI analysis")
+            logger.info(f"    - Selected {len(filtered)} finding(s) for AI analysis")
+            if self.config.ai_max_findings and original_count > self.config.ai_max_findings:
+                logger.info(f"    - Limited from {original_count} to {len(filtered)} due to --ai-max-findings")
+        else:
+            logger.info(f"  Selected {len(filtered)} finding(s) for AI analysis")
+            if self.config.ai_max_findings and original_count > self.config.ai_max_findings:
+                logger.info(f"    (Limited from {original_count} eligible findings)")
 
         return filtered
 
@@ -360,16 +403,30 @@ class AIEngine:
                     raise
 
             # Parse response
+            # Validate suggested_severity before converting to enum
+            suggested_severity_value = response.get("suggested_severity")
+            suggested_severity = None
+            if suggested_severity_value:
+                # Check if it's a valid Severity enum value (case-insensitive)
+                severity_str = str(suggested_severity_value).lower().strip()
+                if severity_str in [s.value for s in Severity]:
+                    try:
+                        suggested_severity = Severity(severity_str)
+                    except (ValueError, KeyError):
+                        # Invalid severity value, ignore it
+                        logger.debug(f"    Invalid suggested_severity: {suggested_severity_value}, ignoring")
+                        suggested_severity = None
+                else:
+                    # Not a valid severity value (e.g., "none"), ignore it
+                    logger.debug(f"    Invalid suggested_severity: {suggested_severity_value}, ignoring")
+                    suggested_severity = None
+            
             verdict = AIVerdict(
                 is_false_positive=response.get("is_false_positive", False),
                 confidence=float(response.get("confidence", 0.5)),
                 reasoning=response.get("reasoning", "No reasoning provided"),
                 enhanced_remediation=response.get("enhanced_remediation"),
-                suggested_severity=(
-                    Severity(response["suggested_severity"])
-                    if response.get("suggested_severity")
-                    else None
-                ),
+                suggested_severity=suggested_severity,
                 additional_context=response.get("additional_context", {}),
             )
 

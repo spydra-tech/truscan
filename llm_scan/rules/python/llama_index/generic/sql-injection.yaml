@@ -62,7 +62,7 @@ rules:
       likelihood: "high"
       description: "Text-to-SQL query engine (NLSQLTableQueryEngine, SQLTableRetrieverQueryEngine, PGVectorSQLQueryEngine) is executed with user input. These engines generate SQL queries from natural language, and prompt injection can lead to arbitrary SQL execution (DROP TABLE, data exfiltration). CVE-2025-1793 and CVE-2024-23751 (CVSS 9.8)."
       remediation: "Never use Text-to-SQL query engines with untrusted user input. If Text-to-SQL is necessary, implement strict input validation, SQL query sanitization, parameterized queries, and database access controls. Use allowlists for SQL operations and restrict database permissions. Consider using safer alternatives that use parameterized queries."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_sql_injection.py"
       references:
@@ -71,7 +71,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/89.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: llamaindex-llm02-sql-retriever-user-input
     patterns:
@@ -110,7 +110,7 @@ rules:
       likelihood: "high"
       description: "NLSQLRetriever is executed with user input. NLSQLRetriever generates SQL queries from natural language, and prompt injection can lead to arbitrary SQL execution. CVE-2025-1793."
       remediation: "Never use NLSQLRetriever with untrusted user input. If SQL retrieval is necessary, implement strict input validation, SQL query sanitization, parameterized queries, and database access controls. Use allowlists for SQL operations and restrict database permissions."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_sql_injection.py"
       references:
@@ -119,7 +119,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/89.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: llamaindex-llm02-query-engine-sql-output
     mode: taint
@@ -163,7 +163,7 @@ rules:
       likelihood: "high"
       description: "Query engine output flows into SQL execution without sanitization. If the query engine generates SQL queries, this can lead to SQL injection attacks. Even if the engine is not a Text-to-SQL engine, output should be validated before SQL execution."
       remediation: "Always use parameterized queries instead of string concatenation. Validate and sanitize query engine output before SQL execution. Use SQL query builders or ORMs that support parameterized queries. Implement SQL query allowlisting and restrict database permissions."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_sql_injection.py"
       references:
@@ -171,4 +171,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/89.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

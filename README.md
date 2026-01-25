@@ -263,7 +263,7 @@ rules:
       remediation: "Fix guidance here"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 ```
 
 2. The rule will be automatically loaded when scanning with the rules directory.

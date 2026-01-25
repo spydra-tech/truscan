@@ -53,7 +53,7 @@ rules:
       likelihood: "medium"  # AI will assess data source trustworthiness
       description: "Model is trained with potentially untrusted data sources (web requests, user files, external URLs). This can lead to training data poisoning where malicious content influences model behavior. AI analysis will determine if the data source is actually untrusted."
       remediation: "Validate and sanitize all training data before use. Use trusted data sources only. Implement content filtering and validation for external data. Verify data integrity and authenticity before training. Use data provenance tracking."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_training_poisoning.py"
       references:
@@ -61,4 +61,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/502.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

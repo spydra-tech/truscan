@@ -9,7 +9,7 @@ rules:
       category: security
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   # Test rule for openai call
   - id: test-openai
@@ -21,4 +21,4 @@ rules:
       category: inventory
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

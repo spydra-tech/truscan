@@ -158,7 +158,7 @@ This happens when the Extension Development Host uses a Python environment witho
    ```
 
 2. **Check file patterns:**
-   - Default includes: `*.py`
+   - Default includes: `**/*.py`
    - Make sure your files match the pattern
 
 3. **Check severity filter:**

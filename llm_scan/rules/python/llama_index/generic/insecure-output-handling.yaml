@@ -53,7 +53,7 @@ rules:
       likelihood: "high"
       description: "Query engine output flows into command execution functions (subprocess, os.system). If the query engine generates commands or command-like output, this can lead to arbitrary command execution."
       remediation: "NEVER execute query engine output as commands. Use safe parsing methods, validation, and structured output formats. If command execution is needed, use allowlists, parameterized commands, or sandboxed execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_command_injection.py"
       references:
@@ -61,7 +61,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/78.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: llamaindex-llm02-query-engine-to-file-ops
     mode: taint
@@ -103,7 +103,7 @@ rules:
       likelihood: "medium"  # AI will assess if path validation is present
       description: "Query engine output is used in file operations. If the output contains file paths, this can lead to path traversal attacks. AI analysis will determine if path validation is present."
       remediation: "Validate and sanitize all file paths before use. Restrict file operations to specific directories. Use os.path.abspath() and os.path.join() for safe path construction. Implement path allowlisting."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_path_traversal.py"
       references:
@@ -111,4 +111,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/22.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

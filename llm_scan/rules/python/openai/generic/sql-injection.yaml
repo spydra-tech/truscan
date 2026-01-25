@@ -73,4 +73,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/89.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

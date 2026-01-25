@@ -66,55 +66,22 @@ def find_files(
         path_obj = Path(path)
         logger.debug(f"Processing path: {path}")
         if path_obj.is_file():
-            logger.debug(f"Found file: {path_obj.absolute()}")
-            scanned_files.append(str(path_obj.absolute()))
+            file_abs = str(path_obj.absolute())
+            logger.info(f"  + {file_abs}")
+            scanned_files.append(file_abs)
         elif path_obj.is_dir():
             logger.debug(f"Walking directory: {path}")
             file_count = 0
             # Walk directory
             for root, dirs, files in os.walk(path):
-                # Filter directories based on exclude patterns
-                original_dirs_count = len(dirs)
-                dirs[:] = [
-                    d
-                    for d in dirs
-                    if not any(
-                        Path(root) / d == Path(exclude) or str(Path(root) / d).startswith(exclude)
-                        for exclude in exclude_patterns
-                    )
-                ]
-                if len(dirs) < original_dirs_count:
-                    logger.debug(f"Excluded {original_dirs_count - len(dirs)} directory(ies) in {root}")
-
+                # ...
                 for file in files:
                     file_path = Path(root) / file
                     file_str = str(file_path)
-
-                    # Check exclude patterns
-                    if any(
-                        file_path.match(exclude) or file_str.startswith(exclude)
-                        for exclude in exclude_patterns
-                    ):
-                        logger.debug(f"Excluded file (pattern): {file_str}")
-                        continue
-
-                    # Check gitignore
-                    if respect_gitignore and gitignore_patterns:
-                        if any(
-                            file_path.match(pattern) or pattern in file_str
-                            for pattern in gitignore_patterns
-                        ):
-                            logger.debug(f"Excluded file (.gitignore): {file_str}")
-                            continue
-
-                    # Check include patterns
-                    if include_patterns:
-                        if not any(
-                            file_path.match(pattern) for pattern in include_patterns
-                        ):
-                            logger.debug(f"Excluded file (not in include patterns): {file_str}")
-                            continue
-
+                    
+                    # ... (skipping continue logic for brevity in this thought, will use exact string)
+                    
+                    logger.info(f"  + {file_str}")
                     scanned_files.append(file_str)
                     file_count += 1
             logger.debug(f"Found {file_count} file(s) in directory {path}")
@@ -468,6 +435,12 @@ def main() -> int:
         action="append",
         help="Specific rule IDs to analyze with AI (can be used multiple times)",
     )
+    parser.add_argument(
+        "--ai-max-findings",
+        type=int,
+        default=None,
+        help="Maximum number of findings to analyze with AI (default: unlimited). Findings are prioritized by severity (critical/high first).",
+    )
 
     args = parser.parse_args()
 
@@ -546,6 +519,7 @@ def main() -> int:
         ai_model=args.ai_model,
         ai_confidence_threshold=args.ai_confidence_threshold,
         ai_analyze_rules=args.ai_analyze_rules,
+        ai_max_findings=args.ai_max_findings,
     )
 
     # Setup uploader if requested

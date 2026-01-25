@@ -45,14 +45,14 @@ rules:
       likelihood: "medium"  # AI will assess if memory content is used in prompts
       description: "User input is stored in conversation memory. If memory content is later included in prompts without sanitization, this can enable prompt injection attacks across conversation turns. AI analysis will determine if memory content is used unsafely in prompts."
       remediation: "Sanitize user input before storing in memory. Sanitize memory content before including in prompts. Use delimiters to separate memory content from instructions. Implement content filtering for memory content."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_memory_injection.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm01-memory-to-prompt
     mode: taint
@@ -98,11 +98,11 @@ rules:
       likelihood: "medium"  # AI will assess if sanitization is present
       description: "Conversation memory content flows into LangChain prompts or chains. If memory contains user input from previous turns, this can enable prompt injection attacks. AI analysis will determine if memory content is properly sanitized before use in prompts."
       remediation: "Sanitize all memory content before including in prompts. Use delimiters to separate memory content from instructions. Implement content filtering for memory. Consider clearing or filtering memory periodically."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_memory_injection.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

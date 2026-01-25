@@ -47,7 +47,7 @@ rules:
         - "https://learnprompting.org/docs/category/-prompt-injection"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: jailbreak-missing-system-prompt
     patterns:
@@ -86,4 +86,4 @@ rules:
         - "https://learnprompting.org/docs/category/-prompt-injection"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

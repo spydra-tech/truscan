@@ -64,7 +64,7 @@ rules:
       likelihood: "high"
       description: "LangChain agent is initialized with dangerous tools (PythonREPLTool, ShellTool) that allow arbitrary code and command execution. If the agent receives user input, attackers can execute arbitrary Python code or shell commands, leading to complete system compromise."
       remediation: "Never use PythonREPLTool or ShellTool in agents that process user input. If code/command execution is necessary, implement strict sandboxing, input validation, output sanitization, and tool restrictions. Use whitelisted, safe tools only. Consider using restricted execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_agent_excessive_agency.py"
       references:
@@ -73,7 +73,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/78.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm08-agent-user-input
     patterns:
@@ -116,7 +116,7 @@ rules:
       likelihood: "medium"  # AI will assess based on agent configuration
       description: "LangChain agent is executed with user input. If the agent has access to dangerous tools (PythonREPLTool, ShellTool, file operations, etc.), this can lead to arbitrary code/command execution. AI analysis will determine if the agent configuration is vulnerable based on available tools."
       remediation: "Validate and sanitize all user input before passing to agents. Review agent tool configuration and remove dangerous tools (PythonREPLTool, ShellTool). Implement tool restrictions, input validation, and output sanitization. Use whitelisted, safe tools only."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_agent_user_input.py"
       references:
@@ -125,7 +125,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/78.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm08-agent-unrestricted-tools
     patterns:
@@ -156,14 +156,14 @@ rules:
       likelihood: "medium"  # AI will assess based on tool types
       description: "LangChain agent is initialized with many tools. This may indicate excessive agency if the tools include dangerous operations (code execution, file system, network, etc.). AI analysis will determine if the tool combination is risky."
       remediation: "Review agent tool configuration. Use principle of least privilege - only include tools necessary for the agent's intended function. Remove dangerous tools (code execution, file system, network operations) unless absolutely necessary and properly sandboxed."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_agent_tools.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm08-agent-tool-file-operations
     patterns:
@@ -194,14 +194,14 @@ rules:
       likelihood: "medium"  # AI will assess based on file operation scope
       description: "LangChain agent has access to file operation tools. If the agent processes user input, this can lead to unauthorized file access, data exfiltration, or file system manipulation. AI analysis will determine if file operations are properly restricted."
       remediation: "Restrict file operation tools to specific directories. Implement file access controls, path validation, and output sanitization. Use sandboxed file operations. Review agent tool permissions and restrict to necessary operations only."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_agent_file_ops.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm08-agent-tool-network-operations
     patterns:
@@ -232,11 +232,11 @@ rules:
       likelihood: "medium"  # AI will assess based on URL validation
       description: "LangChain agent has access to network operation tools (HTTP requests, web search, etc.). If the agent processes user input, this can lead to SSRF attacks, data exfiltration, or unauthorized network access. AI analysis will determine if network operations are properly restricted."
       remediation: "Implement URL allowlisting for network tools. Validate and restrict network destinations. Use network proxies or firewalls to control outbound connections. Review agent tool permissions and restrict to necessary network operations only."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_agent_network.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

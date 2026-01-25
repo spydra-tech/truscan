@@ -59,7 +59,7 @@ rules:
       likelihood: "medium"  # AI will assess actual likelihood based on context
       description: "User input is directly inserted into Anthropic prompts. This pattern may be vulnerable to prompt injection if input is not properly sanitized or validated. AI analysis will determine if the vulnerability is actually exploitable based on code context, sanitization, and validation."
       remediation: "Sanitize and validate all user input before including in prompts. Use prompt templates with parameterized inputs. Implement input validation, output encoding, and prompt engineering best practices. Consider using delimiters to separate user data from instructions."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llm01_prompt_injection.py"
       references:
@@ -67,7 +67,7 @@ rules:
         - "https://learnprompting.org/docs/category/-prompt-injection"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: anthropic-llm01-prompt-injection-concatenation
     patterns:
@@ -123,7 +123,7 @@ rules:
       likelihood: "medium"  # AI will assess actual likelihood
       description: "User input is concatenated into Anthropic prompts using string operations (+, f-strings, .format()). This pattern is vulnerable to prompt injection if input is not properly sanitized. AI analysis will determine exploitability based on sanitization, validation, and code context."
       remediation: "Use parameterized prompt templates instead of string concatenation. Validate and sanitize all user inputs. Avoid f-strings or + operators with user input in prompts. Use structured message formats with clear separation between instructions and data."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llm01_prompt_injection.py"
       references:
@@ -131,7 +131,7 @@ rules:
         - "https://learnprompting.org/docs/category/-prompt-injection"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: anthropic-llm01-prompt-injection-indirect
     mode: taint
@@ -183,7 +183,7 @@ rules:
       likelihood: "medium"  # AI will assess based on data source trustworthiness
       description: "Data from potentially untrusted sources (web requests, external APIs, files, databases) flows into Anthropic prompts. This enables Indirect Prompt Injection where external content contains hidden instructions. AI analysis will determine if the data source is actually untrusted and if the vulnerability is exploitable."
       remediation: "Sanitize and validate all external content before including in prompts. Use delimiters to separate data from instructions. Treat all external content as potentially malicious. Implement content filtering and validation for external data sources."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llm01_prompt_injection.py"
       references:
@@ -191,7 +191,7 @@ rules:
         - "https://learnprompting.org/docs/category/-prompt-injection"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: anthropic-llm01-prompt-injection-template
     patterns:
@@ -231,7 +231,7 @@ rules:
       likelihood: "medium"  # AI will assess based on template content
       description: "Template formatting (.format(), % operator) is used in Anthropic prompts. If user input is included in the template, this can lead to prompt injection. AI analysis will determine if user input is actually present and if the vulnerability is exploitable."
       remediation: "Avoid including user input in prompt templates. Use parameterized templates with validated placeholders. Sanitize any dynamic content before template substitution."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llm01_prompt_injection.py"
       references:
@@ -239,4 +239,4 @@ rules:
         - "https://learnprompting.org/docs/category/-prompt-injection"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

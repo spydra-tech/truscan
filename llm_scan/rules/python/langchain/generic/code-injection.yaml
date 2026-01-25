@@ -53,7 +53,7 @@ rules:
       likelihood: "high"
       description: "PALChain (Program-Aided Language models) is executed with user input. PALChain generates Python code that gets executed, and prompt injection can lead to arbitrary code execution. CVE-2023-46229."
       remediation: "Never use PALChain with untrusted user input. If PALChain is necessary, implement strict input validation, output sanitization, and code execution sandboxing. Consider using safer alternatives that don't execute generated code. Restrict PALChain to trusted, validated inputs only."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_palchain_injection.py"
       references:
@@ -62,7 +62,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm02-palchain-to-eval
     patterns:
@@ -116,7 +116,7 @@ rules:
       likelihood: "high"
       description: "PALChain output is passed directly to eval(), exec(), or compile() functions. PALChain already executes code internally, and passing its output to these functions creates a double code execution risk, making the application extremely vulnerable to code injection attacks."
       remediation: "NEVER execute PALChain output as code. PALChain already executes code internally. If you need to process PALChain output, use safe parsing methods, validation, and structured output formats. Remove any eval/exec/compile calls on PALChain output."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_palchain_injection.py"
       references:
@@ -124,7 +124,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm02-python-repl-chain
     patterns:
@@ -161,7 +161,7 @@ rules:
       likelihood: "high"
       description: "PythonREPLChain is executed with user input. PythonREPLChain executes Python code in a REPL, and user input can lead to arbitrary code execution, file system access, and system compromise."
       remediation: "Never use PythonREPLChain with untrusted user input. If code execution is necessary, implement strict sandboxing, input validation, and output sanitization. Consider using safer alternatives or restricted execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_python_repl.py"
       references:
@@ -169,7 +169,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm02-chain-output-to-eval
     patterns:
@@ -215,7 +215,7 @@ rules:
       likelihood: "high"
       description: "LangChain chain output is passed directly to eval(), exec(), or compile() functions without validation. LLM output can contain malicious code, and executing it leads to arbitrary code execution."
       remediation: "NEVER execute LLM output as code. Use safe parsing, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_code_injection.py"
       references:
@@ -223,4 +223,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

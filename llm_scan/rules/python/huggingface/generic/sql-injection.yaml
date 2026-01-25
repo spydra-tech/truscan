@@ -57,7 +57,7 @@ rules:
       likelihood: "high"
       description: "Pipeline output is concatenated into SQL queries using string formatting (f-strings, .format(), % formatting). This can lead to SQL injection if the pipeline output contains malicious SQL code."
       remediation: "Always use parameterized queries instead of string concatenation. Validate and sanitize pipeline output before SQL execution. Use SQL query builders or ORMs that support parameterized queries. Never trust pipeline output in SQL queries."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_sql_injection.py"
       references:
@@ -65,4 +65,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/89.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

@@ -49,7 +49,7 @@ rules:
       likelihood: "high"
       description: "AWS Bedrock output flows into command execution functions (subprocess, os.system). If the LLM output contains commands or command-like text, this can lead to arbitrary command execution."
       remediation: "Never execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists and parameterized commands."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/aws_bedrock_command_injection.py"
       references:
@@ -57,7 +57,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/78.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: aws-command-injection-direct
     patterns:
@@ -110,7 +110,7 @@ rules:
       likelihood: "high"
       description: "AWS Bedrock output is extracted (from JSON response body) and passed directly to command execution functions (subprocess, os.system). This allows arbitrary command execution if the LLM output contains malicious commands."
       remediation: "Never execute LLM output as shell commands. Use subprocess with shell=False and validate inputs. Use command whitelists and parameterized commands."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/aws_bedrock_command_injection.py"
       references:
@@ -118,4 +118,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/78.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

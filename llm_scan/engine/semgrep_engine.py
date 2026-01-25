@@ -152,6 +152,8 @@ class SemgrepEngine:
                     target_file_paths.append(str(py_file.absolute()))
         
         logger.info(f"Found {len(target_file_paths)} Python file(s) to scan")
+        for f in target_file_paths:
+            logger.info(f"  → Scanning: {f}")
         
         if not target_file_paths:
             logger.warning("No Python files found to scan")

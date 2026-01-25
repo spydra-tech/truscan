@@ -62,7 +62,7 @@ rules:
       likelihood: "high"
       description: "User input is directly inserted into LangChain prompt templates (ChatPromptTemplate, PromptTemplate). This allows template injection attacks where attackers can access Python object internals through template syntax, potentially leading to code execution or sensitive data disclosure. CVE-2023-44467 and CVE-2023-46229."
       remediation: "Never use user input directly in template strings. Use template variables instead: PromptTemplate.from_template('User said: {user_input}'). Then format with: template.format(user_input=sanitized_input). Always sanitize and validate user input before template formatting."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_template_injection.py"
       references:
@@ -71,7 +71,7 @@ rules:
         - "https://learnprompting.org/docs/category/-prompt-injection"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm01-template-injection-concatenation
     patterns:
@@ -114,7 +114,7 @@ rules:
       likelihood: "high"
       description: "User input is concatenated into template strings before being passed to LangChain template constructors. This enables template injection attacks where attackers can inject template syntax to access Python object internals."
       remediation: "Use template variables instead of string concatenation. Use PromptTemplate.from_template('Template: {var}') and format with template.format(var=sanitized_input). Never concatenate user input into template strings."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_template_injection.py"
       references:
@@ -122,7 +122,7 @@ rules:
         - "https://github.com/langchain-ai/langchain/security/advisories/GHSA-6qv9-48xg-fc7f"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm01-template-attribute-access
     patterns:
@@ -153,7 +153,7 @@ rules:
       likelihood: "high"
       description: "LangChain template contains attribute access patterns (e.g., {{obj.__globals__}} or {{obj[key]}}) that allow attackers to traverse Python object attributes, potentially accessing sensitive data like environment variables. CVE-2023-44467."
       remediation: "Remove attribute access patterns from templates. Use only simple variable substitution. If dynamic attribute access is needed, implement it in application code, not in templates. Sanitize all template content."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_template_injection.py"
       references:
@@ -161,7 +161,7 @@ rules:
         - "https://github.com/langchain-ai/langchain/security/advisories/GHSA-6qv9-48xg-fc7f"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm01-chain-user-input
     patterns:
@@ -198,7 +198,7 @@ rules:
       likelihood: "medium"  # AI will assess based on chain configuration
       description: "User input is passed directly to LangChain chain execution methods (run, invoke). If the chain uses templates or prompts that include this input without proper sanitization, this can lead to prompt injection. AI analysis will determine if the chain configuration is vulnerable."
       remediation: "Validate and sanitize all user input before passing to chains. Use parameterized templates in chains. Implement input validation and output encoding. Review chain configuration to ensure user input is properly handled."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_chain_injection.py"
       references:
@@ -206,4 +206,4 @@ rules:
         - "https://learnprompting.org/docs/category/-prompt-injection"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

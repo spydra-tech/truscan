@@ -52,7 +52,7 @@ rules:
       likelihood: "medium"  # AI will assess if limits are configured elsewhere
       description: "Text generation pipeline is created without max_length or max_new_tokens limit. Without token limits, malicious or large inputs can exhaust resources and cause denial of service. AI analysis will determine if limits are configured elsewhere or if this is actually vulnerable."
       remediation: "Always set max_length or max_new_tokens limit when creating text generation pipelines. Implement rate limiting for pipeline endpoints. Monitor resource usage and set appropriate quotas. Use streaming responses for large outputs."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_model_dos.py"
       references:
@@ -60,7 +60,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/400.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: huggingface-llm04-model-no-token-limit
     patterns:
@@ -96,7 +96,7 @@ rules:
       likelihood: "medium"  # AI will assess if limits are configured elsewhere
       description: "Model generation is called without max_length or max_new_tokens limit. Without token limits, malicious or large inputs can exhaust resources and cause denial of service. AI analysis will determine if limits are configured elsewhere or if this is actually vulnerable."
       remediation: "Always set max_length or max_new_tokens limit when calling model.generate(). Implement rate limiting for model inference endpoints. Monitor resource usage and set appropriate quotas. Use streaming responses for large outputs."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_model_dos.py"
       references:
@@ -104,4 +104,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/400.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

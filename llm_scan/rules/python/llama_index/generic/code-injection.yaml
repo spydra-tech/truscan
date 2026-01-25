@@ -53,7 +53,7 @@ rules:
       likelihood: "high"
       description: "PandasQueryEngine is executed with user input. PandasQueryEngine uses exec() to execute generated Python code, and prompt injection can lead to arbitrary code execution. CVE-2023-39662."
       remediation: "Never use PandasQueryEngine with untrusted user input. If PandasQueryEngine is necessary, implement strict input validation, output sanitization, and code execution sandboxing. Consider using safer alternatives that don't execute generated code. Restrict PandasQueryEngine to trusted, validated inputs only."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_pandas_query_engine.py"
       references:
@@ -62,7 +62,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: llamaindex-llm02-safe-eval-bypass
     patterns:
@@ -103,7 +103,7 @@ rules:
       likelihood: "high"
       description: "safe_eval function from exec_utils is used with LLM output. CVE-2024-3098 demonstrates that safe_eval has insufficient input validation and can be bypassed using lambda expressions and object reflection, leading to arbitrary code execution. Affects llama-index-core versions before 0.10.24."
       remediation: "Upgrade to llama-index-core version 0.10.24 or higher. Never use safe_eval with untrusted LLM output. If code execution is necessary, implement strict input validation, use AST parsing instead of eval, or use sandboxed execution environments. Consider alternatives that don't require code execution."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_safe_eval.py"
       references:
@@ -113,7 +113,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: llamaindex-llm02-query-engine-to-eval
     patterns:
@@ -165,7 +165,7 @@ rules:
       likelihood: "high"
       description: "LlamaIndex query engine output is passed directly to eval(), exec(), or compile() functions. Query engines may generate code or structured output that, when executed, leads to arbitrary code execution."
       remediation: "NEVER execute query engine output as code. Use safe parsing methods, validation, and structured output formats (JSON, YAML) instead. If code generation is needed, use AST parsing, whitelisted operations, or sandboxed execution environments."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_query_engine_code_injection.py"
       references:
@@ -173,7 +173,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: llamaindex-llm02-python-code-query-engine
     patterns:
@@ -206,7 +206,7 @@ rules:
       likelihood: "high"
       description: "PythonCodeQueryEngine is executed with user input. If this query engine generates and executes Python code, prompt injection can lead to arbitrary code execution. AI analysis will determine if the engine actually executes code."
       remediation: "Never use PythonCodeQueryEngine with untrusted user input. If code execution is necessary, implement strict input validation, output sanitization, and code execution sandboxing. Consider using safer alternatives that don't execute generated code."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_python_code_engine.py"
       references:
@@ -214,4 +214,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/94.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

@@ -61,5 +61,5 @@ rules:
         - "https://owasp.org/www-community/vulnerabilities/Code_Injection"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 

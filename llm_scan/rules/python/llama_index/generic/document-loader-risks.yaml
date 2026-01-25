@@ -60,14 +60,14 @@ rules:
       likelihood: "medium"  # AI will assess URL source and validation
       description: "Document loader is used with potentially untrusted URLs. This can lead to SSRF attacks (accessing internal services) and training data poisoning (loading malicious content). AI analysis will determine if the URL source is untrusted and if validation is present."
       remediation: "Validate and restrict URLs to allowlisted domains. Implement URL validation to prevent SSRF. Sanitize and validate loaded document content. Use trusted document sources only."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_document_loader.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: llamaindex-llm03-document-loader-untrusted-file
     mode: taint
@@ -112,14 +112,14 @@ rules:
       likelihood: "medium"  # AI will assess path validation
       description: "Document loader is used with user-controlled file paths. This can lead to path traversal attacks and training data poisoning (loading malicious files). AI analysis will determine if path validation is present."
       remediation: "Validate and sanitize file paths. Restrict file access to specific directories. Validate file types and content. Use trusted file sources only."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_document_loader.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: llamaindex-llm01-document-loader-to-prompt
     mode: taint
@@ -165,11 +165,11 @@ rules:
       likelihood: "medium"  # AI will assess if sanitization is present
       description: "Document loader content flows into LLM prompts, API calls, or indexes. If documents contain malicious content, this enables indirect prompt injection or training data poisoning. AI analysis will determine if document content is properly sanitized before use."
       remediation: "Sanitize all document content before including in prompts or indexes. Use delimiters to separate document content from instructions. Implement content filtering and validation for loaded documents. Treat all external document content as potentially malicious."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/llamaindex_document_loader.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

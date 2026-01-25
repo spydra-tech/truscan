@@ -46,14 +46,14 @@ rules:
       likelihood: "medium"  # AI will assess RAG chain configuration
       description: "RAG (Retrieval-Augmented Generation) chain is executed with user input. If retrieved documents contain malicious content or user input is not properly sanitized, this can enable prompt injection. AI analysis will determine if the RAG chain configuration is vulnerable."
       remediation: "Validate and sanitize user queries before RAG retrieval. Sanitize retrieved document content before including in prompts. Use delimiters to separate retrieved content from instructions. Implement content filtering for retrieved documents."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_rag.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm01-rag-retrieved-to-prompt
     mode: taint
@@ -95,14 +95,14 @@ rules:
       likelihood: "medium"  # AI will assess if sanitization is present
       description: "RAG retrieved documents flow into LangChain prompts or chains. If the vector store contains poisoned content, this enables indirect prompt injection. AI analysis will determine if retrieved content is properly sanitized before use in prompts."
       remediation: "Sanitize all retrieved document content before including in prompts. Use delimiters to separate retrieved content from instructions. Implement content filtering and validation for RAG results. Treat all retrieved content as potentially malicious."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_rag.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: langchain-llm03-rag-untrusted-sources
     mode: taint
@@ -141,11 +141,11 @@ rules:
       likelihood: "medium"  # AI will assess data source trustworthiness
       description: "RAG vector store is created from potentially untrusted document sources (web requests, user files, external APIs). This can lead to training data poisoning where malicious content is embedded and later retrieved into prompts. AI analysis will determine if the data source is actually untrusted."
       remediation: "Validate and sanitize all documents before adding to vector stores. Use trusted document sources only. Implement content filtering and validation for external data. Verify data integrity and authenticity before embedding."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/langchain_rag.py"
       references:
         - "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

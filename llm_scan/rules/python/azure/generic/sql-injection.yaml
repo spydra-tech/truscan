@@ -65,7 +65,7 @@ rules:
       likelihood: "high"
       description: "Azure OpenAI output is concatenated into SQL queries using string formatting (f-strings, +, .format(), %), allowing SQL injection attacks. This pattern is always dangerous regardless of validation. Detects multiple string formatting methods."
       remediation: "Use parameterized queries with placeholders. Never concatenate user input or LLM output into SQL queries."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/azure_sql_injection.py"
       references:
@@ -74,7 +74,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/89.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: azure-sql-injection-taint
     mode: taint
@@ -118,7 +118,7 @@ rules:
       likelihood: "high"
       description: "Azure OpenAI chat output flows into SQL queries using string formatting. This can lead to SQL injection if the LLM output contains malicious SQL code."
       remediation: "Always use parameterized queries instead of string concatenation. Validate and sanitize LLM output before SQL execution. Use SQL query builders or ORMs that support parameterized queries."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/azure_sql_injection.py"
       references:
@@ -126,4 +126,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/89.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"

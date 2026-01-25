@@ -99,5 +99,5 @@ rules:
         - "https://owasp.org/www-community/vulnerabilities/Improper_Error_Handling"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 

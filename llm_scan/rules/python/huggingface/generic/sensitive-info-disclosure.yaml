@@ -64,7 +64,7 @@ rules:
       likelihood: "medium"  # AI will assess if sensitive data is present
       description: "Pipeline output is logged without sanitization. If pipeline responses contain sensitive data (PII, secrets, API keys), this can lead to information disclosure through logs. AI analysis will determine if sensitive data is likely present in the logged content."
       remediation: "Sanitize pipeline outputs before logging. Remove or redact sensitive information (PII, secrets, API keys). Use structured logging with field filtering. Implement log access controls and encryption."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_sensitive_info.py"
       references:
@@ -72,7 +72,7 @@ rules:
         - "https://cwe.mitre.org/data/definitions/200.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
 
   - id: huggingface-llm06-model-response-logging
     patterns:
@@ -112,7 +112,7 @@ rules:
       likelihood: "medium"  # AI will assess if sensitive data is present
       description: "Model response is logged without sanitization. If model outputs contain sensitive data (PII, secrets, API keys), this can lead to information disclosure through logs. AI analysis will determine if sensitive data is likely present."
       remediation: "Sanitize model responses before logging. Remove or redact sensitive information (PII, secrets, API keys). Use structured logging with field filtering. Implement log access controls and encryption."
-      ai_analysis_recommended: true
+      ai_analysis_recommended: false
       examples:
         vulnerable: "samples/huggingface_sensitive_info.py"
       references:
@@ -120,4 +120,4 @@ rules:
         - "https://cwe.mitre.org/data/definitions/200.html"
     paths:
       include:
-        - "*.py"
+        - "**/*.py"
