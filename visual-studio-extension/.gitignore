@@ -1,0 +1,11 @@
+bin/
+obj/
+*.user
+*.suo
+*.vsix
+*.pdb
+*.dll
+*.exe
+.vs/
+packages/
+*.cache

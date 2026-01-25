@@ -1,0 +1,29 @@
+name: LLM Security Scan on Release
+
+on:
+  push:
+    tags:
+      # Option 1: Semantic versioning pattern (v1.0.0, v2.1.3, etc.)
+      - 'v*.*.*'
+      # Option 2: More specific pattern (uncomment to use instead)
+      # - 'v[0-9]+.[0-9]+.[0-9]+'
+      # Option 3: Any tag starting with 'release-'
+      # - 'release-*'
+      # Option 4: Specific tag pattern (uncomment and modify)
+      # - 'v[0-9]+\.[0-9]+\.[0-9]+(-.*)?'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name to scan (e.g., v1.0.0)'
+        required: false
+        type: string
+
+jobs:
+  scan:
+    uses: ./.github/workflows/llm-scan-reusable.yml
+    with:
+      # scanner_repo not needed when calling from same repo
+      paths: '.'
+      exclude_patterns: 'tests/**,.github/**,**/__pycache__/**'
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
