@@ -4,7 +4,7 @@ on:
   workflow_call:
     secrets:
       GH_TOKEN:
-        required: true      
+        required: false      
     inputs:
       scanner_repo:
         description: 'Repository containing the scanner (format: owner/repo)'
@@ -68,7 +68,7 @@ jobs:
           repository: ${{ inputs.scanner_repo }}
           ref: ${{ inputs.scanner_ref }}
           path: llm-scan
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5

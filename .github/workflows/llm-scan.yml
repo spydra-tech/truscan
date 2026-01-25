@@ -17,3 +17,5 @@ jobs:
       # scanner_repo not needed when calling from same repo
       paths: '.'
       exclude_patterns: 'tests/**,.github/**,**/__pycache__/**'
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
