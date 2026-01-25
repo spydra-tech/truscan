@@ -31,7 +31,7 @@ namespace LLMSecurityScanner.Commands
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
 
-            var commandService = await package.GetServiceAsync(typeof(Microsoft.VisualStudio.OLE.Interop.IMSOleCommandTarget)) as Microsoft.VisualStudio.OLE.Interop.IMSOleCommandTarget;
+            // Initialize command instance (menu commands can be added later if needed)
             Instance = new ScanWorkspaceCommand(package, scannerService);
         }
 

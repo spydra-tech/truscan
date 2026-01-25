@@ -57,25 +57,41 @@ namespace LLMSecurityScanner.Services
                     task.HelpKeyword = $"LLM:{finding.Category}";
                 }
                 
-                // Store additional info in task description
-                var description = new System.Text.StringBuilder();
-                description.AppendLine($"Rule: {finding.RuleId}");
-                description.AppendLine($"Category: {finding.Category}");
+                // Store additional info in task text (ErrorTask doesn't have Description property)
+                var additionalInfo = new System.Text.StringBuilder();
+                additionalInfo.Append($"[{finding.RuleId}] {finding.Message}");
                 if (!string.IsNullOrEmpty(finding.CWE))
                 {
-                    description.AppendLine($"CWE: {finding.CWE}");
+                    additionalInfo.Append($" | CWE: {finding.CWE}");
                 }
                 if (!string.IsNullOrEmpty(finding.OWASP))
                 {
-                    description.AppendLine($"OWASP: {finding.OWASP}");
+                    additionalInfo.Append($" | OWASP: {finding.OWASP}");
                 }
                 if (!string.IsNullOrEmpty(finding.Remediation))
                 {
-                    description.AppendLine();
-                    description.AppendLine("Remediation:");
-                    description.AppendLine(finding.Remediation);
+                    // Add remediation as a note in the text (truncate if too long)
+                    var remediationPreview = finding.Remediation.Length > 100 
+                        ? finding.Remediation.Substring(0, 100) + "..." 
+                        : finding.Remediation;
+                    additionalInfo.Append($" | Fix: {remediationPreview}");
                 }
-                task.Description = description.ToString();
+                
+                // Use custom properties to store detailed info
+                task.AddCustomProperty("Rule ID", finding.RuleId);
+                task.AddCustomProperty("Category", finding.Category ?? "");
+                if (!string.IsNullOrEmpty(finding.CWE))
+                {
+                    task.AddCustomProperty("CWE", finding.CWE);
+                }
+                if (!string.IsNullOrEmpty(finding.OWASP))
+                {
+                    task.AddCustomProperty("OWASP", finding.OWASP);
+                }
+                if (!string.IsNullOrEmpty(finding.Remediation))
+                {
+                    task.AddCustomProperty("Remediation", finding.Remediation);
+                }
 
                 _errorListProvider.Tasks.Add(task);
             }
