@@ -1,0 +1,77 @@
+name: Build Visual Studio Extension
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'visual-studio-extension/**'
+      - '.github/workflows/build-vs-extension.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'visual-studio-extension/**'
+      - '.github/workflows/build-vs-extension.yml'
+  workflow_dispatch:
+    inputs:
+      build_config:
+        description: 'Build configuration'
+        required: false
+        default: 'Release'
+        type: choice
+        options:
+          - Debug
+          - Release
+
+jobs:
+  build:
+    name: Build VSIX
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore NuGet packages
+        working-directory: visual-studio-extension
+        run: |
+          msbuild LLMSecurityScanner.csproj /t:Restore /p:Configuration=${{ github.event.inputs.build_config || 'Release' }}
+
+      - name: Build VSIX
+        working-directory: visual-studio-extension
+        run: |
+          msbuild LLMSecurityScanner.csproj /p:Configuration=${{ github.event.inputs.build_config || 'Release' }} /p:DeployExtension=false
+
+      - name: Find VSIX file
+        id: find-vsix
+        working-directory: visual-studio-extension
+        shell: pwsh
+        run: |
+          $vsix = Get-ChildItem -Path "bin\${{ github.event.inputs.build_config || 'Release' }}" -Filter "*.vsix" -Recurse | Select-Object -First 1
+          if ($vsix) {
+            Write-Host "Found VSIX: $($vsix.FullName)"
+            Write-Output "vsix_path=$($vsix.FullName)" >> $env:GITHUB_OUTPUT
+            Write-Output "vsix_name=$($vsix.Name)" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "VSIX file not found!"
+            exit 1
+          }
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-package
+          path: ${{ steps.find-vsix.outputs.vsix_path }}
+          retention-days: 30
+
+      - name: Create Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ steps.find-vsix.outputs.vsix_path }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
