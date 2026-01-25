@@ -24,6 +24,7 @@
   </Dependencies>
   <Assets>
     <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="LLMSecurityScanner" Path="|LLMSecurityScanner;PkgdefProjectOutputGroup|" />
+    <Asset Type="Microsoft.VisualStudio.AssetType" d:Source="File" Path="LICENSE.txt" d:TargetPath="LICENSE.txt" />
   </Assets>
   <Prerequisites>
     <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.0,18.0)" DisplayName="Visual Studio core editor" />
