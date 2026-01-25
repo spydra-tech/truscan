@@ -35,13 +35,15 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Restore NuGet packages
-        working-directory: visual-studio-extension
+        shell: cmd
         run: |
+          cd visual-studio-extension
           msbuild LLMSecurityScanner.csproj /t:Restore /p:Configuration=${{ github.event.inputs.build_config || 'Release' }}
 
       - name: Build VSIX
-        working-directory: visual-studio-extension
+        shell: cmd
         run: |
+          cd visual-studio-extension
           msbuild LLMSecurityScanner.csproj /p:Configuration=${{ github.event.inputs.build_config || 'Release' }} /p:DeployExtension=false
 
       - name: Upload VSIX artifact
