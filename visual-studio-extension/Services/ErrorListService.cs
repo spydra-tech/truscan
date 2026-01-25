@@ -40,9 +40,26 @@ namespace LLMSecurityScanner.Services
                 var errorCategory = MapSeverityToCategory(finding.Severity);
                 var errorPriority = MapSeverityToPriority(finding.Severity);
 
+                // Build comprehensive text with all key information
+                var taskText = new System.Text.StringBuilder();
+                taskText.Append($"[{finding.RuleId}] {finding.Message}");
+                
+                if (!string.IsNullOrEmpty(finding.CWE))
+                {
+                    taskText.Append($" | CWE: {finding.CWE}");
+                }
+                if (!string.IsNullOrEmpty(finding.OWASP))
+                {
+                    taskText.Append($" | OWASP: {finding.OWASP}");
+                }
+                if (!string.IsNullOrEmpty(finding.Category))
+                {
+                    taskText.Append($" | Category: {finding.Category}");
+                }
+
                 var task = new ErrorTask
                 {
-                    Text = $"[{finding.RuleId}] {finding.Message}",
+                    Text = taskText.ToString(),
                     Document = finding.FilePath,
                     Line = Math.Max(0, finding.StartLine - 1), // VS uses 0-based indexing
                     Column = Math.Max(0, finding.StartColumn - 1),
@@ -51,46 +68,18 @@ namespace LLMSecurityScanner.Services
                     Category = TaskCategory.BuildCompile
                 };
 
-                // Add custom properties for detailed information
-                if (!string.IsNullOrEmpty(finding.Category))
+                // Use HelpKeyword to store remediation (can be viewed in Error List details)
+                if (!string.IsNullOrEmpty(finding.Remediation))
+                {
+                    // Store remediation in HelpKeyword (visible in Error List)
+                    var remediationText = finding.Remediation.Length > 500 
+                        ? finding.Remediation.Substring(0, 500) + "..." 
+                        : finding.Remediation;
+                    task.HelpKeyword = $"Remediation: {remediationText}";
+                }
+                else if (!string.IsNullOrEmpty(finding.Category))
                 {
                     task.HelpKeyword = $"LLM:{finding.Category}";
-                }
-                
-                // Store additional info in task text (ErrorTask doesn't have Description property)
-                var additionalInfo = new System.Text.StringBuilder();
-                additionalInfo.Append($"[{finding.RuleId}] {finding.Message}");
-                if (!string.IsNullOrEmpty(finding.CWE))
-                {
-                    additionalInfo.Append($" | CWE: {finding.CWE}");
-                }
-                if (!string.IsNullOrEmpty(finding.OWASP))
-                {
-                    additionalInfo.Append($" | OWASP: {finding.OWASP}");
-                }
-                if (!string.IsNullOrEmpty(finding.Remediation))
-                {
-                    // Add remediation as a note in the text (truncate if too long)
-                    var remediationPreview = finding.Remediation.Length > 100 
-                        ? finding.Remediation.Substring(0, 100) + "..." 
-                        : finding.Remediation;
-                    additionalInfo.Append($" | Fix: {remediationPreview}");
-                }
-                
-                // Use custom properties to store detailed info
-                task.AddCustomProperty("Rule ID", finding.RuleId);
-                task.AddCustomProperty("Category", finding.Category ?? "");
-                if (!string.IsNullOrEmpty(finding.CWE))
-                {
-                    task.AddCustomProperty("CWE", finding.CWE);
-                }
-                if (!string.IsNullOrEmpty(finding.OWASP))
-                {
-                    task.AddCustomProperty("OWASP", finding.OWASP);
-                }
-                if (!string.IsNullOrEmpty(finding.Remediation))
-                {
-                    task.AddCustomProperty("Remediation", finding.Remediation);
                 }
 
                 _errorListProvider.Tasks.Add(task);
