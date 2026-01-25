@@ -37,14 +37,12 @@ jobs:
       - name: Restore NuGet packages
         shell: cmd
         run: |
-          cd visual-studio-extension
-          msbuild LLMSecurityScanner.csproj /t:Restore /p:Configuration=${{ github.event.inputs.build_config || 'Release' }}
+          cd visual-studio-extension && msbuild LLMSecurityScanner.csproj /t:Restore /p:Configuration=${{ github.event.inputs.build_config || 'Release' }}
 
       - name: Build VSIX
         shell: cmd
         run: |
-          cd visual-studio-extension
-          msbuild LLMSecurityScanner.csproj /p:Configuration=${{ github.event.inputs.build_config || 'Release' }} /p:DeployExtension=false
+          cd visual-studio-extension && msbuild LLMSecurityScanner.csproj /p:Configuration=${{ github.event.inputs.build_config || 'Release' }} /p:DeployExtension=false
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
