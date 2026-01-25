@@ -46,17 +46,30 @@ jobs:
 
       - name: Find VSIX file
         id: find-vsix
-        working-directory: visual-studio-extension
         shell: pwsh
         run: |
-          $vsix = Get-ChildItem -Path "bin\${{ github.event.inputs.build_config || 'Release' }}" -Filter "*.vsix" -Recurse | Select-Object -First 1
+          $config = "${{ github.event.inputs.build_config || 'Release' }}"
+          $searchPath = "visual-studio-extension\bin\$config"
+          Write-Host "Searching for VSIX in: $searchPath"
+          $vsix = Get-ChildItem -Path $searchPath -Filter "*.vsix" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($vsix) {
-            Write-Host "Found VSIX: $($vsix.FullName)"
-            Write-Output "vsix_path=$($vsix.FullName)" >> $env:GITHUB_OUTPUT
+            $fullPath = $vsix.FullName
+            Write-Host "Found VSIX: $fullPath"
+            Write-Output "vsix_path=$fullPath" >> $env:GITHUB_OUTPUT
             Write-Output "vsix_name=$($vsix.Name)" >> $env:GITHUB_OUTPUT
           } else {
-            Write-Host "VSIX file not found!"
-            exit 1
+            Write-Host "VSIX file not found in $searchPath"
+            Write-Host "Searching entire visual-studio-extension directory..."
+            $vsix = Get-ChildItem -Path "visual-studio-extension" -Filter "*.vsix" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($vsix) {
+              $fullPath = $vsix.FullName
+              Write-Host "Found VSIX: $fullPath"
+              Write-Output "vsix_path=$fullPath" >> $env:GITHUB_OUTPUT
+              Write-Output "vsix_name=$($vsix.Name)" >> $env:GITHUB_OUTPUT
+            } else {
+              Write-Host "VSIX file not found anywhere!"
+              exit 1
+            }
           }
 
       - name: Upload VSIX artifact
@@ -65,6 +78,7 @@ jobs:
           name: vsix-package
           path: ${{ steps.find-vsix.outputs.vsix_path }}
           retention-days: 30
+        if: steps.find-vsix.outputs.vsix_path != ''
 
       - name: Create Release (on tag)
         if: startsWith(github.ref, 'refs/tags/v')
