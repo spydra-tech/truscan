@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("LLM Security Scanner")]
 [assembly: AssemblyDescription("Visual Studio extension for LLM Security Scanner")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("LLM Security")]
+[assembly: AssemblyCompany("Spydra")]
 [assembly: AssemblyProduct("LLM Security Scanner")]
 [assembly: AssemblyCopyright("Copyright © 2024")]
 [assembly: AssemblyTrademark("")]
