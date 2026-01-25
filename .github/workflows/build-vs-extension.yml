@@ -31,10 +31,14 @@ jobs:
   build:
     name: Build VSIX
     runs-on: windows-latest
+    permissions:
+      contents: write  # Required for creating releases
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history and tags
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -58,24 +62,53 @@ jobs:
           if-no-files-found: error
 
       - name: Find VSIX for release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/vscode')
         id: find-vsix-release
-        run: |
-          $vsix = Get-ChildItem -Path . -Filter "*.vsix" -Recurse | Select-Object -First 1 -ExpandProperty FullName
-          if ($vsix) {
-            Write-Host "Found VSIX: $vsix"
-            Write-Output "vsix_path=$vsix" >> $env:GITHUB_OUTPUT
-          } else {
-            Write-Host "VSIX file not found!"
-            exit 1
-          }
         shell: pwsh
+        run: |
+          $vsix = Get-ChildItem -Path "visual-studio-extension" -Filter "*.vsix" -Recurse | Select-Object -First 1
+          if ($vsix) {
+            # Convert to relative path with forward slashes for cross-platform compatibility
+            $relativePath = $vsix.FullName.Replace((Get-Location).Path + "\", "").Replace("\", "/")
+            Write-Host "Found VSIX: $($vsix.FullName)"
+            Write-Host "Relative path: $relativePath"
+            Write-Output "vsix_path=$relativePath" >> $env:GITHUB_OUTPUT
+            Write-Output "vsix_name=$($vsix.Name)" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "VSIX file not found in visual-studio-extension directory!"
+            Write-Host "Searching entire repository..."
+            $vsix = Get-ChildItem -Path . -Filter "*.vsix" -Recurse | Select-Object -First 1
+            if ($vsix) {
+              $relativePath = $vsix.FullName.Replace((Get-Location).Path + "\", "").Replace("\", "/")
+              Write-Host "Found VSIX: $($vsix.FullName)"
+              Write-Host "Relative path: $relativePath"
+              Write-Output "vsix_path=$relativePath" >> $env:GITHUB_OUTPUT
+              Write-Output "vsix_name=$($vsix.Name)" >> $env:GITHUB_OUTPUT
+            } else {
+              Write-Host "VSIX file not found anywhere!"
+              exit 1
+            }
+          }
 
       - name: Create Release (on tag)
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/vscode')
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ steps.find-vsix-release.outputs.vsix_path }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Visual Studio Extension Release ${{ github.ref_name }}
+            
+            This release contains the LLM Security Scanner Visual Studio extension.
+            
+            ### Installation
+            1. Download the `LLMSecurityScanner.vsix` file
+            2. Double-click to install, or use: **Tools → Extensions and Updates → Install from VSIX**
+            3. Restart Visual Studio
+            
+            ### Changes
+            See the [changelog](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/visual-studio-extension/CHANGELOG.md) for details.
           draft: false
           prerelease: false
         env:
