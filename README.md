@@ -13,8 +13,27 @@ A Python-based code scanning tool that uses the Semgrep Python SDK to detect AI/
 
 ## Installation
 
+### From PyPI (Recommended)
+
 ```bash
-pip install semgrep
+pip install llm-scan
+```
+
+This will install the `llm-scan` command-line tool and all dependencies.
+
+### From Source
+
+For development or if you need the latest version:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/code-scan2.git
+cd code-scan2
+
+# Install dependencies
+pip install semgrep requests
+
+# Install in development mode
 pip install -e .
 ```
 
@@ -22,8 +41,13 @@ pip install -e .
 
 ### Command Line Usage
 
+After installation, you can use the `llm-scan` command:
+
 ```bash
 # Scan current directory
+llm-scan . --format console
+
+# Or use as a Python module
 python -m llm_scan.runner . --format console
 
 # Scan specific paths with SARIF output

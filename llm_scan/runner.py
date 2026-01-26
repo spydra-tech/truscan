@@ -10,6 +10,7 @@ from typing import List, Optional
 
 from .config import ScanConfig
 from .enrich.uploader import StubUploader, Uploader
+from .enrich.rest_uploader import RESTUploader
 from .engine.ai_engine import AIEngine
 from .engine.semgrep_engine import SemgrepEngine
 from .models import ScanRequest, ScanResponse, ScanResult
@@ -286,13 +287,13 @@ def run_scan(config: ScanConfig, uploader: Optional[Uploader] = None) -> ScanRes
     if uploader:
         logger.info("")
         logger.info("Step 6: Uploading results...")
-        api_key = os.getenv("LLM_SCAN_API_KEY")
-        if api_key:
-            logger.debug("API key found in environment")
+        # For RESTUploader, api_key is already set in constructor
+        # For backward compatibility, still pass None (uploader will use its own api_key)
+        success = uploader.upload(result, api_key=None)
+        if success:
+            logger.info("✓ Upload completed successfully")
         else:
-            logger.debug("No API key found in environment")
-        uploader.upload(result, api_key)
-        logger.info("✓ Upload completed")
+            logger.warning("⚠ Upload completed with errors (check logs above)")
 
     return result
 
@@ -401,7 +402,15 @@ def main() -> int:
     )
     parser.add_argument(
         "--upload",
-        help="Upload endpoint URL (stub implementation)",
+        help="Upload endpoint URL for sending results to server",
+    )
+    parser.add_argument(
+        "--api-key",
+        help="API key for authentication with upload endpoint (or use LLM_SCAN_API_KEY env var)",
+    )
+    parser.add_argument(
+        "--application-id",
+        help="Application ID to associate with the scan results",
     )
     # AI filtering options
     parser.add_argument(
@@ -525,7 +534,25 @@ def main() -> int:
     # Setup uploader if requested
     uploader = None
     if args.upload:
-        uploader = StubUploader(endpoint=args.upload)
+        # Get API key from args or environment
+        api_key = args.api_key or os.getenv("LLM_SCAN_API_KEY")
+        application_id = args.application_id or os.getenv("LLM_SCAN_APPLICATION_ID")
+        
+        # Use REST uploader if both api_key and application_id are provided
+        if api_key and application_id:
+            logger.info(f"Using REST API uploader for endpoint: {args.upload}")
+            uploader = RESTUploader(
+                endpoint=args.upload,
+                api_key=api_key,
+                application_id=application_id,
+            )
+        else:
+            logger.warning(
+                "Upload endpoint specified but missing api_key or application_id. "
+                "Using stub uploader. Provide --api-key and --application-id or set "
+                "LLM_SCAN_API_KEY and LLM_SCAN_APPLICATION_ID environment variables."
+            )
+            uploader = StubUploader(endpoint=args.upload)
 
     # Run scan
     try:

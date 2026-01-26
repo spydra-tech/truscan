@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include requirements.txt
+include requirements-dev.txt
+include requirements-ai.txt
+recursive-include llm_scan/rules *.yaml *.yml *.md
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .git*

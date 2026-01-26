@@ -1,4 +1,5 @@
 semgrep>=1.0.0
+requests>=2.31.0
 
 # Optional AI dependencies (install separately if using AI filtering)
 # openai>=1.0.0  # For OpenAI provider

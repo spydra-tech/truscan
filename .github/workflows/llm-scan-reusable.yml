@@ -4,6 +4,9 @@ on:
   workflow_call:
     secrets:
       GH_TOKEN:
+        required: false
+      LLM_SCAN_API_KEY:
+        description: 'API key for uploading scan results to server'
         required: false      
     inputs:
       scanner_repo:
@@ -49,6 +52,14 @@ on:
         required: false
         type: number
         default: 30
+      upload_endpoint:
+        description: 'REST API endpoint URL for uploading scan results'
+        required: false
+        type: string
+      application_id:
+        description: 'Application ID to associate with scan results'
+        required: false
+        type: string
 
 jobs:
   scan:
@@ -126,6 +137,13 @@ jobs:
             RULES_PATH="llm_scan/rules/python"
           fi
           
+          # Build upload arguments if configured
+          UPLOAD_ARGS=""
+          if [ -n "${{ inputs.upload_endpoint }}" ] && [ -n "${{ secrets.LLM_SCAN_API_KEY }}" ] && [ -n "${{ inputs.application_id }}" ]; then
+            UPLOAD_ARGS="--upload ${{ inputs.upload_endpoint }} --api-key ${{ secrets.LLM_SCAN_API_KEY }} --application-id ${{ inputs.application_id }}"
+            echo "📤 Upload configured: results will be sent to server"
+          fi
+          
           # Run scan (exit code 1 means findings were found, which is expected)
           set +e  # Don't exit on error
           python -m llm_scan.runner \
@@ -135,7 +153,8 @@ jobs:
             --out llm-scan-results.sarif \
             $EXCLUDE_ARGS \
             $INCLUDE_ARGS \
-            $SEVERITY_ARGS
+            $SEVERITY_ARGS \
+            $UPLOAD_ARGS
           SCAN_EXIT_CODE=$?
           set -e  # Re-enable exit on error
           

@@ -4,17 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-scan"
-version = "0.1.0"
+version = "1.0.0"
 description = "A Python-based code scanning tool for AI/LLM-specific vulnerabilities"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "Spydra", email = "support@spydra.com"},
 ]
-keywords = ["security", "llm", "ai", "code-scanning", "semgrep"]
+keywords = ["security", "llm", "ai", "code-scanning", "semgrep", "vulnerability", "owasp"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Topic :: Security",
     "Topic :: Software Development :: Quality Assurance",
@@ -22,11 +22,19 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 dependencies = [
     "semgrep>=1.0.0",
+    "requests>=2.31.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/your-org/code-scan2"
+Documentation = "https://github.com/your-org/code-scan2#readme"
+Repository = "https://github.com/your-org/code-scan2"
+"Bug Reports" = "https://github.com/your-org/code-scan2/issues"
 
 [project.optional-dependencies]
 dev = [

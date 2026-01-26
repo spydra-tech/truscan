@@ -97,6 +97,24 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically install llm-scan on extension activation. Note: semgrep is ALWAYS installed automatically (required dependency) regardless of this setting. This setting only controls whether to also install llm-scan."
+        },
+        "llmSecurityScanner.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for sending scan results to server (optional). If provided along with applicationId, results will be uploaded to the configured endpoint.",
+          "markdownDescription": "API key for sending scan results to server (optional). If provided along with `applicationId`, results will be uploaded to the configured endpoint."
+        },
+        "llmSecurityScanner.applicationId": {
+          "type": "string",
+          "default": "",
+          "description": "Application ID to associate with scan results (optional). If provided along with apiKey, results will be uploaded to the configured endpoint.",
+          "markdownDescription": "Application ID to associate with scan results (optional). If provided along with `apiKey`, results will be uploaded to the configured endpoint."
+        },
+        "llmSecurityScanner.uploadEndpoint": {
+          "type": "string",
+          "default": "",
+          "description": "REST API endpoint URL for uploading scan results (optional). Defaults to a standard endpoint if not specified.",
+          "markdownDescription": "REST API endpoint URL for uploading scan results (optional). Defaults to a standard endpoint if not specified."
         }
       }
     },

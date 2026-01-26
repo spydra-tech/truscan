@@ -3,6 +3,7 @@ import * as path from 'path';
 import { Scanner } from './scanner';
 import { Finding } from './models';
 import { logger } from './logger';
+import { ResultUploader } from './resultUploader';
 
 export class DiagnosticProvider {
     private diagnosticCollection: vscode.DiagnosticCollection;
@@ -129,6 +130,13 @@ export class DiagnosticProvider {
                 logger.log(`Scan successful. Findings count: ${response.result.findings.length}`);
                 logger.log(`Scanned files: ${response.result.scanned_files.join(', ')}`);
 
+                // Upload results to server if configured (fire-and-forget)
+                if (response.result) {
+                    ResultUploader.uploadResults(response.result).catch((error) => {
+                        logger.error('Failed to upload results', error);
+                    });
+                }
+
                 // Filter findings for this file
                 const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
                 const workspaceRoot = workspaceFolder?.uri.fsPath || '';
@@ -244,6 +252,13 @@ export class DiagnosticProvider {
                     }
 
                     progress.report({ increment: 100, message: 'Complete' });
+
+                    // Upload results to server if configured (fire-and-forget)
+                    if (response.result) {
+                        ResultUploader.uploadResults(response.result).catch((error) => {
+                            logger.error('Failed to upload results', error);
+                        });
+                    }
 
                     if (response.result) {
                         const totalFindings = response.result.findings.length;
