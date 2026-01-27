@@ -69,6 +69,7 @@ class RESTUploader:
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {effective_api_key}",
+                "User-Agent": "llm-scan/1.0.0",
             }
 
             logger.info(f"Uploading {len(result.findings)} findings to {self.endpoint}")

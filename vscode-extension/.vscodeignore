@@ -6,3 +6,4 @@ tsconfig.json
 .yarnrc
 vscode-extension.iml
 *.vsix
+!resources/icon.png

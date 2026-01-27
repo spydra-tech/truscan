@@ -1,17 +1,22 @@
 {
-  "name": "llm-security-scanner",
-  "displayName": "LLM Security Scanner",
-  "description": "Detect AI/LLM-specific security vulnerabilities in your code. Automatically installs semgrep - no manual setup required!",
-  "version": "1.0.0",
-  "publisher": "spydra",
+  "name": "trusys-llm-security-scanner",
+  "displayName": "Trusys - LLM Security Scanner",
+  "description": "Detect AI/LLM-specific security vulnerabilities in your code with real-time scanning. Automatically installs semgrep - no manual setup required! Supports OWASP LLM Top 10, AI-enhanced remediation, and integrates seamlessly with VS Code's Problems panel.",
+  "version": "1.1.1",
+  "publisher": "trusys",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/code-scan2.git"
+    "url": "https://github.com/spydra-tech/truscan.git"
   },
   "license": "MIT",
-  "homepage": "https://github.com/your-org/code-scan2",
+  "icon": "resources/icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "homepage": "https://github.com/spydra-tech/truscan",
   "bugs": {
-    "url": "https://github.com/your-org/code-scan2/issues"
+    "url": "https://github.com/spydra-tech/truscan/issues"
   },
   "engines": {
     "vscode": "^1.74.0"

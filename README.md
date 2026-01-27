@@ -2,6 +2,13 @@
 
 A Python-based code scanning tool that uses the Semgrep Python SDK to detect AI/LLM-specific vulnerabilities. This tool is designed to run in both GitHub Actions (headless CI) and as the scanning engine behind a VS Code extension.
 
+## Components
+
+- **Scanner** (`llm_scan/`): Python package for scanning code
+- **VS Code Extension** (`vscode-extension/`): IDE integration
+- **Visual Studio Extension** (`visual-studio-extension/`): Full IDE integration
+- **Backend API** (`backend/`): Node.js server with MySQL for storing scan results (similar to Semgrep dashboard)
+
 ## Features
 
 - **Semgrep Python SDK Integration**: Uses Semgrep's Python APIs directly (no CLI subprocess calls)
