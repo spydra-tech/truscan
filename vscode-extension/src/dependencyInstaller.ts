@@ -44,7 +44,7 @@ export class DependencyInstaller {
 
                 // If pip show fails, try importing the module directly as fallback
                 let moduleName = packageName;
-                if (packageName === 'llm-scan') {
+                if (packageName === 'trusys-llm-scan') {
                     moduleName = 'llm_scan';
                 } else if (packageName === 'semgrep') {
                     moduleName = 'semgrep';
@@ -218,7 +218,7 @@ export class DependencyInstaller {
      * Check and install all required dependencies
      * @param pythonPath - Path to Python interpreter
      * @param progress - Progress callback
-     * @param installLlmScan - Whether to install llm-scan (optional). semgrep is always installed.
+     * @param installLlmScan - Whether to install trusys-llm-scan (optional). semgrep is always installed.
      */
     async checkAndInstallDependencies(
         pythonPath: string,
@@ -310,49 +310,49 @@ export class DependencyInstaller {
         }
 
         // Check llm_scan (optional - only if installLlmScan is true)
-        // Note: semgrep is always installed above (required), llm-scan is optional
+        // Note: semgrep is always installed above (required), trusys-llm-scan is optional
         if (installLlmScan) {
-            const llmScanInstalled = await this.checkPackageInstalled(effectivePythonPath, 'llm-scan');
+            const llmScanInstalled = await this.checkPackageInstalled(effectivePythonPath, 'trusys-llm-scan');
             if (!llmScanInstalled) {
-                progress?.('Installing llm-scan (optional - can be installed manually if needed)...');
+                progress?.('Installing trusys-llm-scan (optional - can be installed manually if needed)...');
                 
                 // Try to find project root for local installation
                 const projectRoot = this.findProjectRoot();
                 
                 if (projectRoot) {
                     // Install from local path
-                    const installResult = await this.installPackage(effectivePythonPath, 'llm-scan', projectRoot);
+                    const installResult = await this.installPackage(effectivePythonPath, 'trusys-llm-scan', projectRoot);
                     if (installResult.success) {
-                        result.installed.push('llm-scan (from local source)');
-                        progress?.('✓ llm-scan installed from local source');
+                        result.installed.push('trusys-llm-scan (from local source)');
+                        progress?.('✓ trusys-llm-scan installed from local source');
                     } else if (installResult.externallyManaged && !venvCreated) {
                         // Should not happen if we already created venv, but handle it
-                        result.failed.push('llm-scan');
-                        // Don't mark as failure - llm-scan is optional, semgrep is required
-                        result.message += `Note: llm-scan installation failed (optional). You can install manually if needed.\n`;
+                        result.failed.push('trusys-llm-scan');
+                        // Don't mark as failure - trusys-llm-scan is optional, semgrep is required
+                        result.message += `Note: trusys-llm-scan installation failed (optional). You can install manually if needed.\n`;
                     } else {
-                        result.failed.push('llm-scan');
-                        // Don't mark as failure - llm-scan is optional
-                        result.message += `Note: llm-scan installation failed (optional): ${installResult.error}\n`;
+                        result.failed.push('trusys-llm-scan');
+                        // Don't mark as failure - trusys-llm-scan is optional
+                        result.message += `Note: trusys-llm-scan installation failed (optional): ${installResult.error}\n`;
                     }
                 } else {
                     // Try installing from PyPI (if published)
-                    const installResult = await this.installPackage(effectivePythonPath, 'llm-scan');
+                    const installResult = await this.installPackage(effectivePythonPath, 'trusys-llm-scan');
                     if (installResult.success) {
-                        result.installed.push('llm-scan (from PyPI)');
-                        progress?.('✓ llm-scan installed from PyPI');
+                        result.installed.push('trusys-llm-scan (from PyPI)');
+                        progress?.('✓ trusys-llm-scan installed from PyPI');
                     } else {
-                        result.failed.push('llm-scan');
-                        // Don't mark as failure - llm-scan is optional
-                        result.message += `Note: llm-scan not found in PyPI (optional). Install manually if needed:\n` +
+                        result.failed.push('trusys-llm-scan');
+                        // Don't mark as failure - trusys-llm-scan is optional
+                        result.message += `Note: trusys-llm-scan not found in PyPI (optional). Install manually if needed:\n` +
                             `  ${effectivePythonPath} -m pip install -e /path/to/code-scan2\n`;
                     }
                 }
             } else {
-                progress?.('✓ llm-scan is already installed');
+                progress?.('✓ trusys-llm-scan is already installed');
             }
         } else {
-            progress?.('Skipping llm-scan installation (autoInstallDependencies is disabled)');
+            progress?.('Skipping trusys-llm-scan installation (autoInstallDependencies is disabled)');
         }
 
         if (venvCreated) {
@@ -367,12 +367,12 @@ export class DependencyInstaller {
             result.message = 'All dependencies are already installed (semgrep is ready)';
         }
         
-        // If semgrep failed but llm-scan succeeded, still mark as partial success
-        // semgrep is required, llm-scan is optional
+        // If semgrep failed but trusys-llm-scan succeeded, still mark as partial success
+        // semgrep is required, trusys-llm-scan is optional
         if (result.failed.includes('semgrep')) {
             result.success = false; // semgrep failure is critical
-        } else if (result.failed.includes('llm-scan') && result.installed.includes('semgrep')) {
-            // semgrep succeeded, llm-scan failed - this is okay
+        } else if (result.failed.includes('trusys-llm-scan') && result.installed.includes('semgrep')) {
+            // semgrep succeeded, trusys-llm-scan failed - this is okay
             result.success = true;
         }
 
@@ -390,9 +390,9 @@ export class DependencyInstaller {
             missing.push('semgrep');
         }
 
-        const llmScanInstalled = await this.checkPackageInstalled(pythonPath, 'llm-scan');
+        const llmScanInstalled = await this.checkPackageInstalled(pythonPath, 'trusys-llm-scan');
         if (!llmScanInstalled) {
-            missing.push('llm-scan');
+            missing.push('trusys-llm-scan');
         }
 
         return {

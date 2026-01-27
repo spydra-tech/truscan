@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Details - LLM Security Scanner</title>
+    <link rel="stylesheet" href="/ui/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ LLM Security Scanner</h1>
+            <div class="header-actions">
+                <a href="/ui" class="btn btn-secondary">← Back to Dashboard</a>
+            </div>
+        </header>
+
+        <div id="loading" class="loading">Loading scan details...</div>
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="scanDetails" style="display: none;">
+            <!-- Scan Summary -->
+            <section class="section">
+                <h2>Scan Summary</h2>
+                <div class="scan-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Scan ID:</span>
+                        <span class="summary-value" id="scanId"></span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Status:</span>
+                        <span class="summary-value" id="scanStatus"></span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Date:</span>
+                        <span class="summary-value" id="scanDate"></span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Duration:</span>
+                        <span class="summary-value" id="scanDuration"></span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Files Scanned:</span>
+                        <span class="summary-value" id="filesScanned"></span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Rules Loaded:</span>
+                        <span class="summary-value" id="rulesLoaded"></span>
+                    </div>
+                </div>
+
+                <!-- Severity Breakdown -->
+                <div class="severity-breakdown">
+                    <div class="severity-item critical">
+                        <span class="severity-label">Critical:</span>
+                        <span class="severity-count" id="criticalCount">0</span>
+                    </div>
+                    <div class="severity-item high">
+                        <span class="severity-label">High:</span>
+                        <span class="severity-count" id="highCount">0</span>
+                    </div>
+                    <div class="severity-item medium">
+                        <span class="severity-label">Medium:</span>
+                        <span class="severity-count" id="mediumCount">0</span>
+                    </div>
+                    <div class="severity-item low">
+                        <span class="severity-label">Low:</span>
+                        <span class="severity-count" id="lowCount">0</span>
+                    </div>
+                    <div class="severity-item info">
+                        <span class="severity-label">Info:</span>
+                        <span class="severity-count" id="infoCount">0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Findings Table -->
+            <section class="section">
+                <div class="section-header">
+                    <h2>Findings</h2>
+                    <div class="filters">
+                        <select id="severityFilter" class="filter-select">
+                            <option value="">All Severities</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                            <option value="info">Info</option>
+                        </select>
+                        <input type="text" id="searchInput" placeholder="Search findings..." class="search-input">
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="findingsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Rule ID</th>
+                                <th>File</th>
+                                <th>Line</th>
+                                <th>Message</th>
+                                <th>AI Analysis</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="findingsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Finding Detail Modal -->
+    <div id="findingModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" id="closeModalBtn">&times;</span>
+            <div id="findingDetails"></div>
+        </div>
+    </div>
+
+    <script src="/ui/scan-details.js"></script>
+</body>
+</html>

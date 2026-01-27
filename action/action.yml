@@ -1,0 +1,232 @@
+name: 'LLM Security Scan'
+description: 'Scan your codebase for LLM security vulnerabilities using Semgrep and AI-powered analysis'
+author: 'LLM Security Scanner'
+branding:
+  icon: 'shield'
+  color: 'red'
+
+inputs:
+  paths:
+    description: 'Comma-separated list of paths to scan'
+    required: false
+    default: '.'
+  
+  severity:
+    description: 'Filter findings by severity (critical, high, medium, low, info)'
+    required: false
+    default: ''
+  
+  exclude:
+    description: 'Comma-separated list of patterns to exclude'
+    required: false
+    default: ''
+  
+  include:
+    description: 'Comma-separated list of patterns to include'
+    required: false
+    default: ''
+  
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.9'
+  
+  format:
+    description: 'Output format (console, json, sarif)'
+    required: false
+    default: 'sarif'
+  
+  output:
+    description: 'Output file path'
+    required: false
+    default: ''
+  
+  enable-ai-filter:
+    description: 'Enable AI-powered false positive filtering'
+    required: false
+    default: 'false'
+  
+  ai-provider:
+    description: 'AI provider (openai, anthropic)'
+    required: false
+    default: 'openai'
+  
+  ai-model:
+    description: 'AI model to use (e.g., gpt-4, claude-3-opus)'
+    required: false
+    default: 'gpt-4'
+  
+  ai-api-key:
+    description: 'API key for AI provider (use secrets for security)'
+    required: false
+    default: ''
+  
+  ai-confidence-threshold:
+    description: 'Minimum confidence threshold for AI analysis (0.0-1.0)'
+    required: false
+    default: '0.7'
+  
+  ai-max-findings:
+    description: 'Maximum number of findings to analyze with AI'
+    required: false
+    default: ''
+  
+  upload-endpoint:
+    description: 'Backend API endpoint for uploading scan results'
+    required: false
+    default: ''
+  
+  application-id:
+    description: 'Application ID for backend upload'
+    required: false
+    default: ''
+  
+  api-key:
+    description: 'API key for backend upload (use secrets for security)'
+    required: false
+    default: ''
+
+outputs:
+  scan-findings:
+    description: 'Number of findings detected'
+    value: ${{ steps.scan.outputs.findings }}
+  
+  sarif-path:
+    description: 'Path to SARIF output file'
+    value: ${{ steps.scan.outputs.sarif-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      shell: bash
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+      shell: bash
+    
+    - name: Install LLM Security Scanner
+      shell: bash
+      run: |
+        pip install --upgrade pip
+        pip install trusys-llm-scan semgrep
+    
+    - name: Run LLM Security Scan
+      id: scan
+      shell: bash
+      env:
+        OPENAI_API_KEY: ${{ inputs.ai-api-key != '' && inputs.ai-provider == 'openai' && inputs.ai-api-key || env.OPENAI_API_KEY || '' }}
+        ANTHROPIC_API_KEY: ${{ inputs.ai-api-key != '' && inputs.ai-provider == 'anthropic' && inputs.ai-api-key || env.ANTHROPIC_API_KEY || '' }}
+        LLM_SCAN_API_KEY: ${{ inputs.api-key != '' && inputs.api-key || env.LLM_SCAN_API_KEY || '' }}
+        LLM_SCAN_APPLICATION_ID: ${{ inputs.application-id != '' && inputs.application-id || env.LLM_SCAN_APPLICATION_ID || '' }}
+        LLM_SCAN_UPLOAD_ENDPOINT: ${{ inputs.upload-endpoint != '' && inputs.upload-endpoint || env.LLM_SCAN_UPLOAD_ENDPOINT || '' }}
+      run: |
+        # Build command arguments
+        CMD="python -m llm_scan.runner"
+        
+        # Add paths
+        if [ -n "${{ inputs.paths }}" ]; then
+          CMD="$CMD ${{ inputs.paths }}"
+        else
+          CMD="$CMD ."
+        fi
+        
+        # Add format
+        CMD="$CMD --format ${{ inputs.format }}"
+        
+        # Add output file if specified
+        if [ -n "${{ inputs.output }}" ]; then
+          CMD="$CMD --output ${{ inputs.output }}"
+        elif [ "${{ inputs.format }}" = "sarif" ]; then
+          CMD="$CMD --output llm-scan-results.sarif"
+        fi
+        
+        # Add severity filter
+        if [ -n "${{ inputs.severity }}" ]; then
+          CMD="$CMD --severity ${{ inputs.severity }}"
+        fi
+        
+        # Add exclude patterns
+        if [ -n "${{ inputs.exclude }}" ]; then
+          IFS=',' read -ra EXCLUDE_ARRAY <<< "${{ inputs.exclude }}"
+          for pattern in "${EXCLUDE_ARRAY[@]}"; do
+            CMD="$CMD --exclude $(echo "$pattern" | xargs)"
+          done
+        fi
+        
+        # Add include patterns
+        if [ -n "${{ inputs.include }}" ]; then
+          IFS=',' read -ra INCLUDE_ARRAY <<< "${{ inputs.include }}"
+          for pattern in "${INCLUDE_ARRAY[@]}"; do
+            CMD="$CMD --include $(echo "$pattern" | xargs)"
+          done
+        fi
+        
+        # Add AI filter options
+        if [ "${{ inputs.enable-ai-filter }}" = "true" ]; then
+          CMD="$CMD --enable-ai-filter"
+          
+          if [ -n "${{ inputs.ai-provider }}" ]; then
+            CMD="$CMD --ai-provider ${{ inputs.ai-provider }}"
+          fi
+          
+          if [ -n "${{ inputs.ai-model }}" ]; then
+            CMD="$CMD --ai-model ${{ inputs.ai-model }}"
+          fi
+          
+          if [ -n "${{ inputs.ai-api-key }}" ]; then
+            CMD="$CMD --ai-api-key ${{ inputs.ai-api-key }}"
+          fi
+          
+          if [ -n "${{ inputs.ai-confidence-threshold }}" ]; then
+            CMD="$CMD --ai-confidence-threshold ${{ inputs.ai-confidence-threshold }}"
+          fi
+          
+          if [ -n "${{ inputs.ai-max-findings }}" ]; then
+            CMD="$CMD --ai-max-findings ${{ inputs.ai-max-findings }}"
+          fi
+        fi
+        
+        # Add upload options
+        if [ -n "${{ inputs.upload-endpoint }}" ] && [ -n "${{ inputs.application-id }}" ] && [ -n "${{ inputs.api-key }}" ]; then
+          CMD="$CMD --upload-endpoint ${{ inputs.upload-endpoint }}"
+          CMD="$CMD --application-id ${{ inputs.application-id }}"
+          CMD="$CMD --api-key ${{ inputs.api-key }}"
+        fi
+        
+        echo "Running: $CMD"
+        
+        # Run the scan and capture output
+        OUTPUT=$(eval $CMD 2>&1) || SCAN_EXIT_CODE=$?
+        
+        # Extract findings count from output (look for patterns like "Found X finding(s)")
+        FINDINGS_COUNT=$(echo "$OUTPUT" | grep -oP 'Found \K\d+(?= finding\(s\))' | head -1 || echo "0")
+        
+        echo "findings=$FINDINGS_COUNT" >> $GITHUB_OUTPUT
+        
+        # Set SARIF path output
+        if [ "${{ inputs.format }}" = "sarif" ]; then
+          if [ -n "${{ inputs.output }}" ]; then
+            echo "sarif-path=${{ inputs.output }}" >> $GITHUB_OUTPUT
+          else
+            echo "sarif-path=llm-scan-results.sarif" >> $GITHUB_OUTPUT
+          fi
+        fi
+        
+        # Print output
+        echo "$OUTPUT"
+        
+        # Exit with scan exit code if it failed
+        if [ -n "$SCAN_EXIT_CODE" ]; then
+          exit $SCAN_EXIT_CODE
+        fi
+    
+    - name: Upload SARIF results
+      if: inputs.format == 'sarif' && always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}
+      continue-on-error: true

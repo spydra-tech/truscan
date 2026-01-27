@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "llm-scan"
-version = "1.0.0"
+name = "trusys-llm-scan"
+version = "1.0.5"
 description = "A Python-based code scanning tool for AI/LLM-specific vulnerabilities"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -45,7 +45,7 @@ dev = [
 ]
 
 [project.scripts]
-llm-scan = "llm_scan.runner:main"
+trusys-llm-scan = "llm_scan.runner:main"
 
 [tool.setuptools.packages.find]
 exclude = ["tests*"]

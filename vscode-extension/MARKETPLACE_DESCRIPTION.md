@@ -81,7 +81,7 @@ Configure the extension via VS Code Settings (`Ctrl+,` / `Cmd+,`):
 - **`llmSecurityScanner.severityFilter`**: Array of severity levels to show
 - **`llmSecurityScanner.scanOnSave`**: Automatically scan files on save (default: `true`)
 - **`llmSecurityScanner.scanOnOpen`**: Scan files when opened (default: `true`)
-- **`llmSecurityScanner.autoInstallDependencies`**: Controls llm-scan installation (semgrep is always installed)
+- **`llmSecurityScanner.autoInstallDependencies`**: Controls trusys-llm-scan installation (semgrep is always installed)
 
 ## 🎯 Example Findings
 

@@ -9,8 +9,8 @@ from ..models import Finding, ScanResult
 class SARIFFormatter:
     """Formatter for SARIF (Static Analysis Results Interchange Format) output."""
 
-    TOOL_NAME = "llm-scan"
-    TOOL_VERSION = "0.1.0"
+    TOOL_NAME = "trusys-llm-scan"
+    TOOL_VERSION = "1.0.5"
 
     def format(self, result: ScanResult) -> Dict:
         """
@@ -29,7 +29,7 @@ class SARIFFormatter:
                         "driver": {
                             "name": self.TOOL_NAME,
                             "version": self.TOOL_VERSION,
-                            "informationUri": "https://github.com/yourorg/llm-scan",
+                            "informationUri": "https://github.com/spydra-tech/truscan",
                             "rules": self._extract_rules(result.findings),
                         }
                     },

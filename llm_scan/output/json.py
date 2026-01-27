@@ -19,8 +19,8 @@ class JSONFormatter:
         return {
             "version": "1.0",
             "tool": {
-                "name": "llm-scan",
-                "version": "0.1.0",
+                "name": "trusys-llm-scan",
+                "version": "1.0.5",
             },
             "runs": [
                 {

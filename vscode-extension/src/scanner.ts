@@ -5,7 +5,6 @@ import { spawn } from 'child_process';
 import { Finding, ScanResponse } from './models';
 import { resolvePathVariables } from './utils';
 import { logger } from './logger';
-import { ResultUploader } from './resultUploader';
 
 export class Scanner {
     private context: vscode.ExtensionContext;
@@ -472,12 +471,8 @@ export class Scanner {
 
                         logger.log('Scan completed successfully');
                         
-                        // Upload results to server if configured (fire-and-forget)
-                        if (response.result) {
-                            ResultUploader.uploadResults(response.result).catch((error) => {
-                                logger.error('Failed to upload results', error);
-                            });
-                        }
+                        // Note: Database upload is now handled by a separate command
+                        // See "Scan and Upload to Database" command
                         
                         resolve(response);
                         return;

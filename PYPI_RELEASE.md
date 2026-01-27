@@ -1,6 +1,6 @@
-# Publishing llm-scan to PyPI
+# Publishing trusys-llm-scan to PyPI
 
-This guide explains how to publish the `llm-scan` package to PyPI (Python Package Index) so users can install it with `pip install llm-scan`.
+This guide explains how to publish the `trusys-llm-scan` package to PyPI (Python Package Index) so users can install it with `pip install trusys-llm-scan`.
 
 ## Prerequisites
 
@@ -83,20 +83,20 @@ twine upload dist/*
 The package includes:
 - All Python modules in `llm_scan/`
 - All rule files in `llm_scan/rules/`
-- Entry point: `llm-scan` command (installed via `console_scripts`)
+- Entry point: `trusys-llm-scan` command (installed via `console_scripts`)
 
 ## Installation After Release
 
 Users can install the package with:
 
 ```bash
-pip install llm-scan
+pip install trusys-llm-scan
 ```
 
 After installation, users can run:
 
 ```bash
-llm-scan . --format console
+trusys-llm-scan . --format console
 ```
 
 Or use it as a Python module:
@@ -122,20 +122,20 @@ python -m llm_scan.runner . --format console
 1. **Test locally**:
    ```bash
    pip install -e .
-   llm-scan --help
+   trusys-llm-scan --help
    ```
 
 2. **Test on TestPyPI**:
    - Use workflow dispatch with `publish_to_pypi: false`
    - Install from TestPyPI:
      ```bash
-     pip install --index-url https://test.pypi.org/simple/ llm-scan
+     pip install --index-url https://test.pypi.org/simple/ trusys-llm-scan
      ```
 
 3. **Verify package contents**:
    ```bash
    python -m build
-   tar -tzf dist/llm-scan-*.tar.gz | head -20
+   tar -tzf dist/trusys-llm-scan-*.tar.gz | head -20
    ```
 
 ## Troubleshooting
@@ -155,8 +155,8 @@ python -m llm_scan.runner . --format console
 
 ## Post-Release Checklist
 
-- [ ] Verify package installs: `pip install llm-scan`
-- [ ] Test command works: `llm-scan --help`
+- [ ] Verify package installs: `pip install trusys-llm-scan`
+- [ ] Test command works: `trusys-llm-scan --help`
 - [ ] Verify rules are included: Check `llm_scan/rules/` directory
 - [ ] Update documentation with new version
 - [ ] Announce release (if applicable)

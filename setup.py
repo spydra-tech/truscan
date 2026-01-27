@@ -6,18 +6,18 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="llm-scan",
-    version="1.0.0",
+    name="trusys-llm-scan",
+    version="1.0.5",
     author="Spydra",
-    author_email="support@spydra.com",
+    author_email="manish@trusys.ai",
     description="A Python-based code scanning tool for AI/LLM-specific vulnerabilities",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/your-org/code-scan2",
+    url="https://github.com/spydra-tech/truscan",
     project_urls={
-        "Bug Reports": "https://github.com/your-org/code-scan2/issues",
-        "Source": "https://github.com/your-org/code-scan2",
-        "Documentation": "https://github.com/your-org/code-scan2#readme",
+        "Bug Reports": "https://github.com/spydra-tech/truscan/issues",
+        "Source": "https://github.com/spydra-tech/truscan",
+        "Documentation": "https://github.com/spydra-tech/truscan#readme",
     },
     packages=find_packages(exclude=["tests", "tests.*"]),
     classifiers=[
@@ -46,7 +46,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "llm-scan=llm_scan.runner:main",
+            "trusys-llm-scan=llm_scan.runner:main",
         ],
     },
     include_package_data=True,

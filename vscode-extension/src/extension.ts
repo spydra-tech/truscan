@@ -5,6 +5,7 @@ import { DiagnosticProvider } from './diagnosticProvider';
 import { DependencyInstaller } from './dependencyInstaller';
 import { getPythonPath } from './utils';
 import { logger } from './logger';
+import { ResultUploader } from './resultUploader';
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 let scanner: Scanner;
@@ -20,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const autoInstall = config.get<boolean>('autoInstallDependencies', true);
 
     // ALWAYS install semgrep (required dependency) - regardless of autoInstall setting
-    // The autoInstall setting only controls whether to also install llm-scan
+    // The autoInstall setting only controls whether to also install trusys-llm-scan
     const installer = new DependencyInstaller();
     
     // Always check and install semgrep (required)
@@ -37,7 +38,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 const installResult = await installer.checkAndInstallDependencies(
                     pythonPath,
                     (message) => progress.report({ message }),
-                    autoInstall // Pass autoInstall flag to control llm-scan installation
+                    autoInstall // Pass autoInstall flag to control trusys-llm-scan installation
                 );
 
                 if (installResult.success) {
@@ -57,7 +58,7 @@ export async function activate(context: vscode.ExtensionContext) {
                         );
                     }
                 } else {
-                    // Check if semgrep failed (critical) vs llm-scan failed (non-critical)
+                    // Check if semgrep failed (critical) vs trusys-llm-scan failed (non-critical)
                     if (installResult.failed.includes('semgrep')) {
                         vscode.window.showErrorMessage(
                             `LLM Security Scanner: Failed to install semgrep (required dependency). ${installResult.message}`,
@@ -72,7 +73,7 @@ export async function activate(context: vscode.ExtensionContext) {
                             }
                         });
                     } else {
-                        // Only llm-scan failed, which is optional
+                        // Only trusys-llm-scan failed, which is optional
                         vscode.window.showInformationMessage(
                             `LLM Security Scanner: semgrep installed successfully. ${installResult.message}`,
                             'OK'
@@ -139,6 +140,100 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     );
 
+    const scanAndUploadCommand = vscode.commands.registerCommand(
+        'llmSecurityScanner.scanAndUpload',
+        async () => {
+            logger.log('Command: Scan and Upload to Database triggered');
+            const config = vscode.workspace.getConfiguration('llmSecurityScanner');
+            const apiKey = config.get<string>('apiKey', '');
+            const applicationId = config.get<string>('applicationId', '');
+            const uploadEndpoint = config.get<string>('uploadEndpoint', '');
+
+            // Check if database upload is configured
+            if (!apiKey || !applicationId || !uploadEndpoint) {
+                const missing = [];
+                if (!apiKey) missing.push('apiKey');
+                if (!applicationId) missing.push('applicationId');
+                if (!uploadEndpoint) missing.push('uploadEndpoint');
+                
+                const message = `Database upload requires the following settings: ${missing.join(', ')}. Please configure them in VS Code settings.`;
+                vscode.window.showWarningMessage(message, 'Open Settings').then(selection => {
+                    if (selection === 'Open Settings') {
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'llmSecurityScanner');
+                    }
+                });
+                logger.warn(message);
+                return;
+            }
+
+            try {
+                // Show progress
+                await vscode.window.withProgress(
+                    {
+                        location: vscode.ProgressLocation.Notification,
+                        title: 'LLM Security Scanner: Scanning and uploading...',
+                        cancellable: false
+                    },
+                    async (progress) => {
+                        progress.report({ increment: 0, message: 'Scanning workspace...' });
+                        
+                        // First, scan the workspace
+                        await diagnosticProvider.scanWorkspace();
+                        
+                        progress.report({ increment: 50, message: 'Uploading results to database...' });
+                        
+                        // Get the scan result (we need to scan again or get cached result)
+                        // For now, we'll scan again to get fresh results
+                        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+                        if (!workspaceFolder) {
+                            throw new Error('No workspace folder found');
+                        }
+
+                        const scanResponse = await scanner.scanFileOrPath(workspaceFolder.uri.fsPath);
+                        
+                        if (!scanResponse.success || !scanResponse.result) {
+                            throw new Error(scanResponse.error || 'Scan failed');
+                        }
+
+                        // Upload results
+                        const uploadResult = await ResultUploader.uploadResults(scanResponse.result);
+                        
+                        progress.report({ increment: 100, message: 'Complete' });
+
+                        if (uploadResult.success) {
+                            vscode.window.showInformationMessage(
+                                `✓ ${uploadResult.message}`,
+                                'OK'
+                            );
+                        } else {
+                            vscode.window.showWarningMessage(
+                                `⚠ ${uploadResult.message}`,
+                                'View Logs',
+                                'Open Settings'
+                            ).then(selection => {
+                                if (selection === 'View Logs') {
+                                    logger.show();
+                                } else if (selection === 'Open Settings') {
+                                    vscode.commands.executeCommand('workbench.action.openSettings', 'llmSecurityScanner');
+                                }
+                            });
+                        }
+                    }
+                );
+            } catch (error: any) {
+                logger.error('Error in scanAndUpload command', error);
+                vscode.window.showErrorMessage(
+                    `Scan and upload failed: ${error.message}`,
+                    'View Logs'
+                ).then(selection => {
+                    if (selection === 'View Logs') {
+                        logger.show();
+                    }
+                });
+            }
+        }
+    );
+
     const installDependenciesCommand = vscode.commands.registerCommand(
         'llmSecurityScanner.installDependencies',
         async () => {
@@ -158,7 +253,7 @@ export async function activate(context: vscode.ExtensionContext) {
                         const installResult = await installer.checkAndInstallDependencies(
                             pythonPath,
                             (message) => progress.report({ message }),
-                            true // Always install llm-scan when manually triggered
+                            true // Always install trusys-llm-scan when manually triggered
                         );
 
                         if (installResult.success) {
@@ -198,7 +293,13 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     );
 
-    context.subscriptions.push(scanWorkspaceCommand, scanFileCommand, clearResultsCommand, installDependenciesCommand);
+    context.subscriptions.push(
+        scanWorkspaceCommand, 
+        scanFileCommand, 
+        scanAndUploadCommand,
+        clearResultsCommand, 
+        installDependenciesCommand
+    );
 
     // Auto-scan on file save
     const onSaveDisposable = vscode.workspace.onDidSaveTextDocument(async (document) => {

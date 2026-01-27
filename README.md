@@ -23,10 +23,10 @@ A Python-based code scanning tool that uses the Semgrep Python SDK to detect AI/
 ### From PyPI (Recommended)
 
 ```bash
-pip install llm-scan
+pip install trusys-llm-scan
 ```
 
-This will install the `llm-scan` command-line tool and all dependencies.
+This will install the `trusys-llm-scan` command-line tool and all dependencies.
 
 ### From Source
 
@@ -48,11 +48,19 @@ pip install -e .
 
 ### Command Line Usage
 
-After installation, you can use the `llm-scan` command:
+After installation, you can use the `trusys-llm-scan` command:
 
 ```bash
+# Show installed version
+trusys-llm-scan --version
+# or
+trusys-llm-scan -V
+
+# Check PyPI for a newer version
+trusys-llm-scan --check-updates
+
 # Scan current directory
-llm-scan . --format console
+trusys-llm-scan . --format console
 
 # Or use as a Python module
 python -m llm_scan.runner . --format console

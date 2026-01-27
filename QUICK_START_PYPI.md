@@ -1,40 +1,52 @@
-# Quick Start: Installing llm-scan from PyPI
+# Quick Start: Installing trusys-llm-scan from PyPI
 
 ## Installation
 
 ```bash
-pip install llm-scan
+pip install trusys-llm-scan
 ```
 
 ## Basic Usage
 
 ```bash
 # Scan current directory
-llm-scan . --format console
+trusys-llm-scan . --format console
 
 # Scan specific directory
-llm-scan src/ --format console
+trusys-llm-scan src/ --format console
 
 # Output to SARIF file
-llm-scan . --format sarif --out results.sarif
+trusys-llm-scan . --format sarif --out results.sarif
 
 # Output to JSON file
-llm-scan . --format json --out results.json
+trusys-llm-scan . --format json --out results.json
 
 # Filter by severity
-llm-scan . --severity critical high --format console
+trusys-llm-scan . --severity critical high --format console
 
 # Upload results to server (requires API key and application ID)
-llm-scan . \
+trusys-llm-scan . \
   --upload https://api.example.com/v1/scans \
   --api-key YOUR_API_KEY \
   --application-id YOUR_APP_ID
 ```
 
+## Version
+
+```bash
+# Show version
+trusys-llm-scan --version
+# or
+trusys-llm-scan -V
+
+# Check for updates on PyPI
+trusys-llm-scan --check-updates
+```
+
 ## Help
 
 ```bash
-llm-scan --help
+trusys-llm-scan --help
 ```
 
 ## Requirements
@@ -58,7 +70,7 @@ pip install anthropic
 Then use:
 
 ```bash
-llm-scan . --enable-ai-filter --ai-provider openai --ai-model gpt-4
+trusys-llm-scan . --enable-ai-filter --ai-provider openai --ai-model gpt-4
 ```
 
 ## More Information

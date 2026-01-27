@@ -10,6 +10,8 @@ A VS Code extension that integrates the LLM Security Scanner to detect AI/LLM-sp
 - 📊 **Severity Filtering**: Configure which severity levels to display
 - 🚀 **Workspace Scanning**: Scan entire workspace with a single command
 - 💡 **Remediation Guidance**: Shows remediation suggestions for each finding
+- 📤 **Database Upload** (Optional): Upload scan results to a backend database for tracking and analytics
+- 🤖 **AI Analysis** (Optional): Use AI to filter false positives and enhance remediation suggestions
 
 ## Installation
 
@@ -48,7 +50,7 @@ Then install the `.vsix` file in VS Code:
 - Python 3.11+ 
 - **No manual installation needed!** The extension automatically installs all required dependencies:
   - **semgrep**: Always installed automatically (required dependency)
-  - **llm-scan**: Installed automatically if available in workspace, or from PyPI
+  - **trusys-llm-scan**: Installed automatically if available in workspace, or from PyPI
 
 ### Automatic Dependency Installation
 
@@ -56,7 +58,7 @@ Then install the `.vsix` file in VS Code:
 
 The extension automatically:
 - **Installs semgrep** (required dependency) - always installed automatically
-- **Installs llm-scan** (if available in workspace or from PyPI)
+- **Installs trusys-llm-scan** (if available in workspace or from PyPI)
 - **Creates a virtual environment** if your Python environment is externally-managed (e.g., system Python on Linux)
 
 This happens automatically in the background with a progress notification. You can disable this by setting `llmSecurityScanner.autoInstallDependencies` to `false` in settings.
@@ -73,7 +75,7 @@ pip install -e .
 
 **Option 2: Install as package (if published)**
 ```bash
-pip install llm-scan
+pip install trusys-llm-scan
 ```
 
 **Option 3: Using a Virtual Environment (Recommended)**
@@ -105,7 +107,9 @@ When you press F5 to test the extension, the Extension Development Host uses the
 
 ## Configuration
 
-The extension can be configured via VS Code settings:
+The extension can be configured via VS Code settings. Open Settings with `Ctrl+,` (or `Cmd+,` on Mac) and search for "LLM Security".
+
+### Basic Settings
 
 ```json
 {
@@ -122,8 +126,7 @@ The extension can be configured via VS Code settings:
 }
 ```
 
-### Settings
-
+**Basic Settings:**
 - **`llmSecurityScanner.enabled`**: Enable/disable the extension
 - **`llmSecurityScanner.rulesDirectory`**: Path to rules directory (relative to workspace root)
 - **`llmSecurityScanner.pythonPath`**: Path to Python interpreter
@@ -135,14 +138,172 @@ The extension can be configured via VS Code settings:
 - **`llmSecurityScanner.scanDelay`**: Delay in milliseconds before scanning after changes
 - **`llmSecurityScanner.autoInstallDependencies`**: Automatically install Python dependencies on extension activation (default: true)
 
+### Database Upload Settings (Optional)
+
+**What is Database Upload?**
+
+By default, scan results are only displayed in VS Code's Problems panel. Database upload allows you to:
+- **Store scan results** in a centralized database for tracking over time
+- **View results in a web dashboard** (if you have the backend server running)
+- **Track trends** and see how vulnerabilities change across scans
+- **Share results** with your team through a common dashboard
+- **Generate reports** and analytics from historical scan data
+
+**Important:** Database upload is **disabled by default**. Regular scans (`Scan Workspace`, `Scan Current File`) do **NOT** upload to the database automatically. You must use the separate **"Scan and Upload to Database"** command to upload results.
+
+**How to Configure Database Upload:**
+
+1. **Set up your backend server** (see `backend/README.md` for setup instructions)
+2. **Get your API credentials:**
+   - **API Key**: Generated from your backend server (see backend documentation)
+   - **Application ID**: Created in your backend database (see backend documentation)
+   - **Upload Endpoint**: Your backend server URL + `/api/v1/scans`
+     - Example: `http://localhost:3000/api/v1/scans`
+     - Example: `https://api.example.com/api/v1/scans`
+
+3. **Configure VS Code settings:**
+
+```json
+{
+  "llmSecurityScanner.apiKey": "your-api-key-here",
+  "llmSecurityScanner.applicationId": "your-application-id-here",
+  "llmSecurityScanner.uploadEndpoint": "http://localhost:3000/api/v1/scans"
+}
+```
+
+**How to Use Database Upload:**
+
+1. **Configure the settings** above
+2. **Run the command:**
+   - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+   - Type "Scan and Upload to Database"
+   - Select the command
+3. **The extension will:**
+   - Validate your settings
+   - Scan your workspace
+   - Upload results to the database
+   - Show success or error messages
+
+**Database Upload Settings:**
+- **`llmSecurityScanner.apiKey`**: API key for authenticating with your backend server
+- **`llmSecurityScanner.applicationId`**: Application ID to associate scan results with
+- **`llmSecurityScanner.uploadEndpoint`**: Full URL to your backend's scan upload endpoint
+
+**Error Handling:**
+
+The extension handles upload errors gracefully:
+- **Missing settings**: Clear message about what's missing
+- **Connection errors**: Helpful messages about server connectivity
+- **Authentication errors**: Guidance on checking your API key
+- **Timeout errors**: Information about server response times
+
+All errors are logged and displayed without crashing the extension.
+
+### AI Analysis Settings (Optional)
+
+**What is AI Analysis?**
+
+AI Analysis uses large language models (OpenAI GPT-4 or Anthropic Claude) to:
+- **Filter false positives**: AI analyzes findings to determine if they're real vulnerabilities
+- **Provide enhanced remediation**: AI-generated, context-aware fix suggestions
+- **Improve accuracy**: Reduce noise by focusing on genuine security issues
+- **Add confidence scores**: Each finding gets an AI confidence rating
+
+**Important:** AI Analysis requires:
+- An API key from OpenAI or Anthropic
+- Additional API costs (charged by the AI provider)
+- Internet connection for API calls
+
+**How to Configure AI Analysis:**
+
+1. **Get an AI API key:**
+   - **OpenAI**: Sign up at https://platform.openai.com and get an API key
+   - **Anthropic**: Sign up at https://console.anthropic.com and get an API key
+
+2. **Configure VS Code settings:**
+
+```json
+{
+  "llmSecurityScanner.enableAiAnalysis": true,
+  "llmSecurityScanner.aiProvider": "openai",
+  "llmSecurityScanner.aiModel": "gpt-4",
+  "llmSecurityScanner.aiApiKey": "sk-your-openai-api-key",
+  "llmSecurityScanner.aiConfidenceThreshold": 0.7,
+  "llmSecurityScanner.aiMaxFindings": 50
+}
+```
+
+**Alternative: Use Environment Variables**
+
+Instead of storing API keys in settings, you can use environment variables:
+- For OpenAI: Set `OPENAI_API_KEY` environment variable
+- For Anthropic: Set `ANTHROPIC_API_KEY` environment variable
+
+Then you can omit `aiApiKey` from settings:
+
+```json
+{
+  "llmSecurityScanner.enableAiAnalysis": true,
+  "llmSecurityScanner.aiProvider": "openai",
+  "llmSecurityScanner.aiModel": "gpt-4"
+  // API key will be read from OPENAI_API_KEY env var
+}
+```
+
+**AI Analysis Settings:**
+- **`llmSecurityScanner.enableAiAnalysis`**: Enable/disable AI analysis (default: `false`)
+- **`llmSecurityScanner.aiProvider`**: AI provider to use - `"openai"` or `"anthropic"` (default: `"openai"`)
+- **`llmSecurityScanner.aiModel`**: Model to use (default: `"gpt-4"`)
+  - OpenAI: `"gpt-4"`, `"gpt-4-turbo"`, `"gpt-3.5-turbo"`
+  - Anthropic: `"claude-3-opus"`, `"claude-3-sonnet"`, `"claude-3-haiku"`
+- **`llmSecurityScanner.aiApiKey`**: Your AI provider API key (optional if using env vars)
+- **`llmSecurityScanner.aiConfidenceThreshold`**: Minimum confidence (0.0-1.0) to filter findings (default: `0.7`)
+- **`llmSecurityScanner.aiMaxFindings`**: Maximum findings to analyze (default: `null` = unlimited)
+
+**When AI Analysis Runs:**
+
+AI analysis runs automatically during scans when enabled. Findings are analyzed and:
+- False positives are marked (but still shown)
+- Enhanced remediation suggestions are added
+- Confidence scores are included in the results
+
+**Cost Considerations:**
+
+- AI analysis makes API calls to OpenAI/Anthropic
+- Costs depend on:
+  - Number of findings analyzed
+  - Model used (GPT-4 is more expensive than GPT-3.5)
+  - Provider pricing
+- Use `aiMaxFindings` to limit analysis and control costs
+- Findings are prioritized by severity (critical/high first)
+
 ## Commands
 
 The extension provides the following commands (accessible via Command Palette `Ctrl+Shift+P` / `Cmd+Shift+P`):
 
-- **LLM Security: Scan Workspace** - Scan entire workspace for vulnerabilities
-- **LLM Security: Scan Current File** - Scan only the currently active file
-- **LLM Security: Clear Results** - Clear all diagnostic results
+- **LLM Security: Scan Workspace** - Scan entire workspace for vulnerabilities (results shown in Problems panel only)
+- **LLM Security: Scan Current File** - Scan only the currently active file (results shown in Problems panel only)
+- **LLM Security: Scan and Upload to Database** - Scan workspace and upload results to database (requires database settings configured)
+- **LLM Security: Clear Results** - Clear all diagnostic results from Problems panel
 - **LLM Security: Install Dependencies** - Manually trigger dependency installation
+
+### Understanding Scan vs Upload
+
+**Regular Scans** (`Scan Workspace`, `Scan Current File`):
+- ✅ Display results in VS Code Problems panel
+- ✅ Show diagnostics inline in your code
+- ✅ No database interaction
+- ✅ No internet required (except for AI analysis if enabled)
+- ✅ Fast and lightweight
+
+**Scan and Upload to Database**:
+- ✅ Everything regular scans do, PLUS:
+- ✅ Uploads results to your backend database
+- ✅ Stores results for historical tracking
+- ✅ Enables web dashboard viewing
+- ⚠️ Requires database settings configured
+- ⚠️ Requires backend server running
+- ⚠️ Requires internet connection
 
 ## Usage
 
@@ -152,22 +313,50 @@ By default, the extension automatically scans files when:
 - A file is saved
 - A file is opened
 
-You can disable this behavior in settings.
+You can disable this behavior in settings (`scanOnSave`, `scanOnOpen`).
+
+**Note:** Automatic scans do **NOT** upload to database. They only show results in the Problems panel.
 
 ### Manual Scanning
 
+**Regular Scans (No Database Upload):**
+
 1. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 2. Type "LLM Security"
-3. Select "Scan Workspace" or "Scan Current File"
+3. Select:
+   - **"Scan Workspace"** - Scan entire workspace
+   - **"Scan Current File"** - Scan only the active file
+
+Results appear in the Problems panel only.
+
+**Scan and Upload to Database:**
+
+1. **First, configure database settings** (see Database Upload Settings above)
+2. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
+3. Type "Scan and Upload to Database"
+4. Select the command
+
+The extension will:
+- Validate your database settings
+- Scan your workspace
+- Upload results to the database
+- Show success/error notifications
 
 ### Viewing Results
 
-Scan results appear in the **Problems** panel:
+**In VS Code:**
+Scan results appear in the **Problems** panel (`Ctrl+Shift+M` / `Cmd+Shift+M`):
 - Critical/Error findings show as red errors
 - High/Medium findings show as yellow warnings
 - Low/Info findings show as blue information
 
 Click on a finding to jump to the code location.
+
+**In Web Dashboard (if database upload enabled):**
+1. Ensure your backend server is running
+2. Open the dashboard URL (typically `http://localhost:3000/ui`)
+3. Enter your API key
+4. View all uploaded scan results, trends, and analytics
 
 ## Detected Vulnerabilities
 
@@ -204,11 +393,50 @@ Plus additional code injection and command injection patterns.
 3. Ensure severity filter includes the severity of findings
 4. Try running "Scan Workspace" command manually
 
+### Database Upload Issues
+
+**"Database upload requires apiKey, applicationId, and uploadEndpoint"**
+- Configure all three settings in VS Code settings
+- See "Database Upload Settings" section above
+
+**"Connection refused" or "Server not found"**
+- Verify your backend server is running
+- Check the `uploadEndpoint` URL is correct
+- Test the endpoint in a browser: `http://your-server:port/health`
+
+**"Authentication failed"**
+- Verify your API key is correct
+- Check the API key hasn't expired
+- Ensure the API key is associated with the correct application ID
+
+**"Upload timed out"**
+- Check your internet connection
+- Verify the server is accessible
+- Check server logs for errors
+
+**"Upload endpoint not found (404)"**
+- Verify the endpoint URL includes `/api/v1/scans`
+- Check your backend server routes are configured correctly
+
+### AI Analysis Issues
+
+**AI analysis not running:**
+- Verify `enableAiAnalysis` is set to `true`
+- Check API key is configured (in settings or environment variable)
+- Ensure you have internet connection
+- Check Output panel for AI-related errors
+
+**"AI provider initialization failed":**
+- Verify API key is valid
+- Check you have credits/quota with the AI provider
+- Try a different model (e.g., `gpt-3.5-turbo` instead of `gpt-4`)
+
 ### Performance Issues
 
 - Increase `scanDelay` to reduce scanning frequency
 - Disable `scanOnSave` or `scanOnOpen` if scanning is too frequent
 - Use `excludePatterns` to skip large directories
+- Set `aiMaxFindings` to limit AI analysis costs
 
 ## Development
 

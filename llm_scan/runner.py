@@ -331,10 +331,66 @@ def run_scan_for_vscode(request: ScanRequest) -> ScanResponse:
         return ScanResponse(success=False, error=str(e))
 
 
+def _check_pypi_version(current: str, index_url: str = "https://pypi.org/pypi/trusys-llm-scan/json") -> None:
+    """Query PyPI (or index_url) for latest version and print update status."""
+    try:
+        import json
+        import urllib.request
+        req = urllib.request.Request(
+            index_url,
+            headers={"Accept": "application/json", "User-Agent": "trusys-llm-scan/" + current},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.load(resp)
+        latest = data.get("info", {}).get("version")
+        if not latest:
+            print("Could not determine latest version from index.", file=sys.stderr)
+            return
+        # Simple numeric version comparison (e.g. 1.0.2 vs 1.0.3)
+        def _parse(v: str):
+            parts = []
+            for x in v.split("."):
+                try:
+                    parts.append(int(x.split("+")[0].split("-")[0]))
+                except ValueError:
+                    parts.append(0)
+            return tuple(parts)
+
+        if _parse(latest) > _parse(current):
+            print(f"trusys-llm-scan {current} (installed) < {latest} (latest on PyPI)")
+            print(f"Upgrade: pip install -U trusys-llm-scan")
+        else:
+            print(f"trusys-llm-scan {current} is up to date.")
+    except Exception as e:
+        print(f"Version check failed: {e}", file=sys.stderr)
+
+
 def main() -> int:
     """Main CLI entry point."""
+    # Handle --version / -V and --check-updates before any parsing (work without paths)
+    argv = sys.argv[1:]  # skip script name
+    if "--version" in argv or "-V" in argv:
+        from . import __version__
+        print(f"trusys-llm-scan {__version__}")
+        return 0
+    if "--check-updates" in argv:
+        from . import __version__
+        _check_pypi_version(__version__)
+        return 0
+
     parser = argparse.ArgumentParser(
         description="LLM Security Scanner - Detect AI/LLM-specific vulnerabilities"
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="store_true",
+        help="Show version and exit",
+    )
+    parser.add_argument(
+        "--check-updates",
+        action="store_true",
+        help="Check PyPI for a newer version and exit",
     )
     parser.add_argument(
         "--verbose",
@@ -349,7 +405,7 @@ def main() -> int:
     )
     parser.add_argument(
         "paths",
-        nargs="+",
+        nargs="*",
         help="Paths to scan (files or directories)",
     )
     parser.add_argument(
@@ -452,6 +508,9 @@ def main() -> int:
     )
 
     args = parser.parse_args()
+
+    if not args.paths or len(args.paths) == 0:
+        parser.error("the following arguments are required: paths")
 
     # Configure logging
     log_level = logging.WARNING

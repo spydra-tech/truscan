@@ -2,7 +2,7 @@
   "name": "trusys-llm-security-scanner",
   "displayName": "Trusys - LLM Security Scanner",
   "description": "Detect AI/LLM-specific security vulnerabilities in your code with real-time scanning. Automatically installs semgrep - no manual setup required! Supports OWASP LLM Top 10, AI-enhanced remediation, and integrates seamlessly with VS Code's Problems panel.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "trusys",
   "repository": {
     "type": "git",
@@ -101,7 +101,7 @@
         "llmSecurityScanner.autoInstallDependencies": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically install llm-scan on extension activation. Note: semgrep is ALWAYS installed automatically (required dependency) regardless of this setting. This setting only controls whether to also install llm-scan."
+          "description": "Automatically install trusys-llm-scan on extension activation. Note: semgrep is ALWAYS installed automatically (required dependency) regardless of this setting. This setting only controls whether to also install trusys-llm-scan."
         },
         "llmSecurityScanner.apiKey": {
           "type": "string",
@@ -132,6 +132,11 @@
       {
         "command": "llmSecurityScanner.scanFile",
         "title": "Scan Current File",
+        "category": "LLM Security"
+      },
+      {
+        "command": "llmSecurityScanner.scanAndUpload",
+        "title": "Scan and Upload to Database",
         "category": "LLM Security"
       },
       {

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Security Scanner - Dashboard</title>
+    <link rel="stylesheet" href="/ui/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ LLM Security Scanner</h1>
+            <div class="header-actions">
+                <input type="text" id="apiKeyInput" placeholder="Enter API Key" class="api-key-input">
+                <button id="setApiKeyBtn" class="btn btn-primary">Set API Key</button>
+            </div>
+        </header>
+
+        <div id="loading" class="loading" style="display: none;">Loading...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="welcome" style="text-align: center; padding: 40px; color: #8b949e;">
+            <p>Enter your API key above to view scan results</p>
+        </div>
+
+        <div id="dashboard" style="display: none;">
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Scans</div>
+                    <div class="stat-value" id="totalScans">0</div>
+                </div>
+                <div class="stat-card critical">
+                    <div class="stat-label">Critical Findings</div>
+                    <div class="stat-value" id="totalCritical">0</div>
+                </div>
+                <div class="stat-card high">
+                    <div class="stat-label">High Findings</div>
+                    <div class="stat-value" id="totalHigh">0</div>
+                </div>
+                <div class="stat-card medium">
+                    <div class="stat-label">Medium Findings</div>
+                    <div class="stat-value" id="totalMedium">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Findings</div>
+                    <div class="stat-value" id="totalFindings">0</div>
+                </div>
+                <div class="stat-card ai">
+                    <div class="stat-label">AI Analyzed</div>
+                    <div class="stat-value" id="aiAnalyzed">0</div>
+                </div>
+            </div>
+
+            <!-- Recent Scans -->
+            <section class="section">
+                <h2>Recent Scans</h2>
+                <div class="table-container">
+                    <table id="scansTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Scan ID</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Findings</th>
+                                <th>Critical</th>
+                                <th>High</th>
+                                <th>Duration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scansTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- All Scans -->
+            <section class="section">
+                <h2>All Scans</h2>
+                <div id="allScansContainer"></div>
+                <div class="pagination" id="pagination"></div>
+            </section>
+        </div>
+    </div>
+
+    <script src="/ui/app.js"></script>
+</body>
+</html>
