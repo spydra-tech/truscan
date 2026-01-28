@@ -15,7 +15,7 @@ def _fix_json_escapes(content: str) -> str:
     Handles cases where OpenAI returns JSON with invalid escape sequences
     (e.g., unescaped backslashes in strings like file paths).
     
-    Valid JSON escapes: \" \\ \/ \b \f \n \r \t \uXXXX
+    Valid JSON escapes: \" \\ \/ \b \f \n \r \t \\uXXXX
     """
     import re
     
