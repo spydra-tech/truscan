@@ -35,7 +35,7 @@ jobs:
           ref: ${{ github.event.inputs.tag_ref || github.ref }}
 
       - name: Run LLM Security Scan (Marketplace)
-        uses: spydra-tech/trusys-llm-security-scan-action@v1
+        uses: spydra-tech/trusys-llm-security-scan-action
         with:
           paths: '.'
           exclude: 'tests/**,.github/**,**/__pycache__/**,**/.git/**'
