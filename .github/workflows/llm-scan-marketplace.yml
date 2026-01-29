@@ -61,6 +61,37 @@ jobs:
           application-id: ${{ secrets.LLM_SCAN_APPLICATION_ID }}
           api-key: ${{ secrets.LLM_SCAN_API_KEY }}
 
+      - name: Resolve target ref/sha
+        id: target
+        shell: bash
+        run: |
+          # Determine what we actually scanned
+          REF="${{ github.event.inputs.tag_ref }}"
+          if [ -z "$REF" ]; then
+            REF="${GITHUB_REF}"
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+          # We checked out the target ref; HEAD is the commit we scanned
+          SHA="$(git rev-parse HEAD)"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Debug SARIF path and size
+        if: always()
+        run: |
+          echo "SARIF: ${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}"
+          ls -la
+          wc -c "${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}" || true
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}
+          category: trusys-llm-scan
+          ref: ${{ steps.target.outputs.ref }}
+          sha: ${{ steps.target.outputs.sha }}
+          wait-for-processing: true
+
       # - name: Upload SARIF to GitHub Code Scanning
       #   uses: github/codeql-action/upload-sarif@v4
       #   with:
