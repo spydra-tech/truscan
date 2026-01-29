@@ -39,12 +39,12 @@ jobs:
 
       - name: Run LLM Security Scan (Marketplace)
         uses: spydra-tech/trusys-llm-security-scan-action@main
-        continue-on-error: true  # Job succeeds even when findings exist; SARIF still uploads
         with:
           python-version: '3.11'
           paths: '.'
           exclude: 'tests/**,.github/**,**/__pycache__/**,**/.git/**'
           format: 'sarif'
+          no-fail-on-findings: 'true'
           # AI analysis: limit to 5 findings
           enable-ai-filter: 'true'
           ai-max-findings: '5'

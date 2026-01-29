@@ -506,6 +506,11 @@ def main() -> int:
         default=None,
         help="Maximum number of findings to analyze with AI (default: unlimited). Findings are prioritized by severity (critical/high first).",
     )
+    parser.add_argument(
+        "--no-fail-on-findings",
+        action="store_true",
+        help="Always exit 0 even when findings exist (useful for report-only / CI where job should succeed).",
+    )
 
     args = parser.parse_args()
 
@@ -655,9 +660,13 @@ def main() -> int:
                 logger.info("✓ Console output written")
         logger.info("✓ Output formatting completed")
 
-        # Return exit code based on findings
-        exit_code = 1 if result.findings else 0
-        logger.info(f"Scan completed with exit code {exit_code}")
+        # Return exit code based on findings (unless --no-fail-on-findings)
+        if args.no_fail_on_findings:
+            exit_code = 0
+            logger.info("Scan completed with exit code 0 (--no-fail-on-findings)")
+        else:
+            exit_code = 1 if result.findings else 0
+            logger.info(f"Scan completed with exit code {exit_code}")
         return exit_code
 
     except Exception as e:
