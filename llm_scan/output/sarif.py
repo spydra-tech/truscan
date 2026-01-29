@@ -1,9 +1,39 @@
 """SARIF output formatter for GitHub Code Scanning."""
 
+import hashlib
 import json
-from typing import Dict, List
+import os
+from pathlib import Path
+from typing import Dict, List, Optional
 
 from ..models import Finding, ScanResult
+
+
+def _primary_location_line_hash(
+    rule_id: str,
+    uri: str,
+    start_line: int,
+    start_column: int,
+    snippet: Optional[str] = None,
+) -> str:
+    """Compute a stable fingerprint for a result (GitHub primaryLocationLineHash format)."""
+    content = f"{rule_id}:{uri}:{start_line}:{start_column}:{snippet or ''}"
+    h = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    return f"{h[:16]}:1"
+
+
+def _to_relative_uri(file_path: str, root_path: Optional[str] = None) -> str:
+    """Convert absolute path to URI relative to root (forward slashes)."""
+    if not file_path or file_path == "unknown":
+        return file_path
+    root = Path(root_path or os.getcwd()).resolve()
+    path_obj = Path(file_path).resolve()
+    try:
+        rel = path_obj.relative_to(root)
+    except ValueError:
+        # path not under root (e.g. different drive), return as-is but normalized
+        return path_obj.as_posix()
+    return rel.as_posix()
 
 
 class SARIFFormatter:
@@ -12,9 +42,13 @@ class SARIFFormatter:
     TOOL_NAME = "trusys-llm-scan"
     TOOL_VERSION = "1.0.5"
 
-    def format(self, result: ScanResult) -> Dict:
+    def format(self, result: ScanResult, root_path: Optional[str] = None) -> Dict:
         """
         Format scan result as SARIF.
+
+        Args:
+            result: Scan result with findings.
+            root_path: Base path for relative artifact URIs (default: cwd). Use repo root in CI.
 
         Returns:
             SARIF JSON structure
@@ -33,7 +67,7 @@ class SARIFFormatter:
                             "rules": self._extract_rules(result.findings),
                         }
                     },
-                    "results": self._format_results(result.findings),
+                    "results": self._format_results(result.findings, root_path),
                     "invocations": [
                         {
                             "executionSuccessful": True,
@@ -76,10 +110,18 @@ class SARIFFormatter:
 
         return list(rules.values())
 
-    def _format_results(self, findings: List[Finding]) -> List[Dict]:
-        """Format findings as SARIF results."""
+    def _format_results(self, findings: List[Finding], root_path: Optional[str] = None) -> List[Dict]:
+        """Format findings as SARIF results. Artifact URIs are relative to root_path."""
         results = []
         for finding in findings:
+            uri = _to_relative_uri(finding.location.file_path, root_path)
+            fingerprint = _primary_location_line_hash(
+                finding.rule_id,
+                uri,
+                finding.location.start_line,
+                finding.location.start_column,
+                finding.location.snippet,
+            )
             result = {
                 "ruleId": finding.rule_id,
                 "level": self._severity_to_sarif_level(finding.severity),
@@ -90,7 +132,7 @@ class SARIFFormatter:
                     {
                         "physicalLocation": {
                             "artifactLocation": {
-                                "uri": finding.location.file_path,
+                                "uri": uri,
                             },
                             "region": {
                                 "startLine": finding.location.start_line,
@@ -101,6 +143,9 @@ class SARIFFormatter:
                         }
                     }
                 ],
+                "partialFingerprints": {
+                    "primaryLocationLineHash": fingerprint,
+                },
             }
 
             # Add code snippet if available
@@ -114,6 +159,7 @@ class SARIFFormatter:
                 code_flows = []
                 thread_flows = []
                 for step in finding.dataflow_path:
+                    step_uri = _to_relative_uri(step.file_path, root_path)
                     thread_flows.append(
                         {
                             "locations": [
@@ -121,7 +167,7 @@ class SARIFFormatter:
                                     "location": {
                                         "physicalLocation": {
                                             "artifactLocation": {
-                                                "uri": step.file_path,
+                                                "uri": step_uri,
                                             },
                                             "region": {
                                                 "startLine": step.start_line,
@@ -154,8 +200,8 @@ class SARIFFormatter:
         }
         return mapping.get(severity.value, "warning")
 
-    def write(self, result: ScanResult, output_path: str) -> None:
-        """Write SARIF output to file."""
-        sarif_data = self.format(result)
+    def write(self, result: ScanResult, output_path: str, root_path: Optional[str] = None) -> None:
+        """Write SARIF output to file. Artifact URIs are relative to root_path (default: cwd)."""
+        sarif_data = self.format(result, root_path=root_path)
         with open(output_path, "w") as f:
             json.dump(sarif_data, f, indent=2)

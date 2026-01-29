@@ -630,8 +630,10 @@ def main() -> int:
             logger.debug("Using SARIF formatter")
             formatter = SARIFFormatter()
             if args.out:
+                # Use cwd as root so artifact URIs are relative to repo root (GitHub Code Scanning)
+                root_path = str(Path.cwd())
                 logger.info(f"Writing SARIF output to {args.out}")
-                formatter.write(result, args.out)
+                formatter.write(result, args.out, root_path=root_path)
                 logger.info("✓ SARIF output written")
             else:
                 logger.error("--out is required for SARIF format")
