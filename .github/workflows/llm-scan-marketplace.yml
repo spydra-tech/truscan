@@ -105,15 +105,51 @@ jobs:
           sha: ${{ steps.target.outputs.sha }}
           wait-for-processing: true
 
-      # - name: Upload SARIF to GitHub Code Scanning
-      #   uses: github/codeql-action/upload-sarif@v4
-      #   with:
-      #     sarif_file: ${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}
-      #     wait-for-processing: true
+      - name: Convert SARIF to CSV
+        if: always()
+        run: |
+          python3 << 'EOF'
+          import csv
+          import json
+          import sys
+          sarif_path = "${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}"
+          csv_path = "llm-scan-results.csv"
+          try:
+              with open(sarif_path) as f:
+                  sarif = json.load(f)
+          except FileNotFoundError:
+              # No SARIF file (e.g. scan failed); create empty CSV
+              with open(csv_path, 'w', newline='') as f:
+                  w = csv.writer(f)
+                  w.writerow(["rule_id", "level", "message", "file_path", "start_line", "end_line", "start_column", "end_column", "snippet"])
+              sys.exit(0)
+          rows = []
+          for run in sarif.get("runs", []):
+              for result in run.get("results", []):
+                  rule_id = result.get("ruleId", "")
+                  level = result.get("level", "")
+                  msg = (result.get("message") or {}).get("text", "")
+                  loc = (result.get("locations") or [{}])[0]
+                  phys = loc.get("physicalLocation", {})
+                  art = phys.get("artifactLocation", {})
+                  region = phys.get("region", {})
+                  file_path = art.get("uri", "")
+                  start_line = region.get("startLine", "")
+                  end_line = region.get("endLine", start_line)
+                  start_col = region.get("startColumn", "")
+                  end_col = region.get("endColumn", "")
+                  snippet = (region.get("snippet") or {}).get("text", "").replace("\n", " ").replace('"', '""')
+                  rows.append([rule_id, level, msg, file_path, start_line, end_line, start_col, end_col, snippet])
+          with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+              w = csv.writer(f)
+              w.writerow(["rule_id", "level", "message", "file_path", "start_line", "end_line", "start_column", "end_column", "snippet"])
+              w.writerows(rows)
+          print(f"Wrote {len(rows)} finding(s) to {csv_path}")
+          EOF
 
-      - name: Upload SARIF as artifact
+      - name: Upload CSV as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: llm-scan-results-sarif
-          path: ${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}
+          name: llm-scan-results-csv
+          path: llm-scan-results.csv
