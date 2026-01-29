@@ -64,3 +64,10 @@ jobs:
         with:
           sarif_file: ${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}
           wait-for-processing: true
+
+      - name: Upload SARIF as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-scan-results-sarif
+          path: ${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}
