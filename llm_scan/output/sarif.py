@@ -1,25 +1,11 @@
 """SARIF output formatter for GitHub Code Scanning."""
 
-import hashlib
 import json
 import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from ..models import Finding, ScanResult
-
-
-def _primary_location_line_hash(
-    rule_id: str,
-    uri: str,
-    start_line: int,
-    start_column: int,
-    snippet: Optional[str] = None,
-) -> str:
-    """Compute a stable fingerprint for a result (GitHub primaryLocationLineHash format)."""
-    content = f"{rule_id}:{uri}:{start_line}:{start_column}:{snippet or ''}"
-    h = hashlib.sha256(content.encode("utf-8")).hexdigest()
-    return f"{h[:16]}:1"
 
 
 def _to_relative_uri(file_path: str, root_path: Optional[str] = None) -> str:
@@ -115,13 +101,6 @@ class SARIFFormatter:
         results = []
         for finding in findings:
             uri = _to_relative_uri(finding.location.file_path, root_path)
-            fingerprint = _primary_location_line_hash(
-                finding.rule_id,
-                uri,
-                finding.location.start_line,
-                finding.location.start_column,
-                finding.location.snippet,
-            )
             result = {
                 "ruleId": finding.rule_id,
                 "level": self._severity_to_sarif_level(finding.severity),
@@ -143,9 +122,6 @@ class SARIFFormatter:
                         }
                     }
                 ],
-                "partialFingerprints": {
-                    "primaryLocationLineHash": fingerprint,
-                },
             }
 
             # Add code snippet if available
