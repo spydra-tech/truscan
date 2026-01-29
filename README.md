@@ -1,4 +1,4 @@
-# LLM Security Scanner
+# Truscan - Trusys LLM Security Scanner
 
 A Python-based code scanning tool that uses the Semgrep Python SDK to detect AI/LLM-specific vulnerabilities. This tool is designed to run in both GitHub Actions (headless CI) and as the scanning engine behind a VS Code extension.
 
