@@ -13,6 +13,8 @@ name: LLM Security Scan (Marketplace)
 
 on:
   push:
+    branches: [main]
+    
     tags:
       # Runs when you push a tag matching these patterns:
       - 'scan/v*.*.*'        # e.g. scan/v1.0.0, scan/v2.1.3
