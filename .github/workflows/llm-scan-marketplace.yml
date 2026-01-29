@@ -37,6 +37,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag_ref || github.ref }}
+          fetch-depth: 0
 
       - name: Run LLM Security Scan (Marketplace)
         id: scan
@@ -61,20 +62,29 @@ jobs:
           application-id: ${{ secrets.LLM_SCAN_APPLICATION_ID }}
           api-key: ${{ secrets.LLM_SCAN_API_KEY }}
 
+      
+      
       - name: Resolve target ref/sha
         id: target
         shell: bash
         run: |
-          # Determine what we actually scanned
-          REF="${{ github.event.inputs.tag_ref }}"
-          if [ -z "$REF" ]; then
-            REF="${GITHUB_REF}"
-          fi
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
-
-          # We checked out the target ref; HEAD is the commit we scanned
+          set -euo pipefail
           SHA="$(git rev-parse HEAD)"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+
+          # Ensure we have the default branch tip locally
+          git fetch origin "${DEFAULT_BRANCH}" --depth=1 || true
+
+          # If the scanned SHA is reachable from default branch, upload results to default branch
+          if git merge-base --is-ancestor "${SHA}" "origin/${DEFAULT_BRANCH}"; then
+            echo "ref=refs/heads/${DEFAULT_BRANCH}" >> "$GITHUB_OUTPUT"
+            echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          else
+            # Fallback: upload to the tag ref (may ingest but not appear in Security -> Code scanning)
+            echo "ref=${GITHUB_REF}" >> "$GITHUB_OUTPUT"
+            echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+            echo "WARNING: SHA not on default branch; tag uploads may not appear in Code Scanning UI."
+          fi
 
       - name: Debug SARIF path and size
         if: always()
@@ -82,6 +92,7 @@ jobs:
           echo "SARIF: ${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}"
           ls -la
           wc -c "${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}" || true
+
 
       - name: Upload SARIF to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v4
