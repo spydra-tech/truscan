@@ -45,7 +45,7 @@ jobs:
         with:
           python-version: '3.11'
           # Scan only one file in samples (change to your file, e.g. samples/aws/aws_code_injection.py)
-          paths: 'samples/aws/aws_code_injection.py'
+          paths: 'samples/azure/azure_code_injection.py'
           exclude: 'tests/**,.github/**,**/__pycache__/**,**/.git/**'
           format: 'sarif'
           no-fail-on-findings: 'true'
