@@ -43,7 +43,8 @@ jobs:
         uses: spydra-tech/trusys-llm-security-scan-action@main
         with:
           python-version: '3.11'
-          paths: '.'
+          # Scan only one file in samples (change to your file, e.g. samples/aws/aws_code_injection.py)
+          paths: 'samples/aws/aws_code_injection.py'
           exclude: 'tests/**,.github/**,**/__pycache__/**,**/.git/**'
           format: 'sarif'
           no-fail-on-findings: 'true'
