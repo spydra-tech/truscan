@@ -38,7 +38,6 @@ jobs:
           ref: ${{ github.event.inputs.tag_ref || github.ref }}
 
       - name: Run LLM Security Scan (Marketplace)
-        id: scan
         uses: spydra-tech/trusys-llm-security-scan-action@main
         with:
           python-version: '3.11'
@@ -56,10 +55,3 @@ jobs:
           upload-endpoint: ${{ secrets.LLM_SCAN_UPLOAD_ENDPOINT }}
           application-id: ${{ secrets.LLM_SCAN_APPLICATION_ID }}
           api-key: ${{ secrets.LLM_SCAN_API_KEY }}
-
-      - name: Upload SARIF to GitHub Code Scanning
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: ${{ steps.scan.outputs.sarif-path || 'llm-scan-results.sarif' }}
-          wait-for-processing: true
