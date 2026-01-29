@@ -39,6 +39,7 @@ jobs:
 
       - name: Run LLM Security Scan (Marketplace)
         uses: spydra-tech/trusys-llm-security-scan-action@main
+        continue-on-error: true  # Job succeeds even when findings exist; SARIF still uploads
         with:
           python-version: '3.11'
           paths: '.'
