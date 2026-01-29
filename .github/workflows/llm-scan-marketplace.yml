@@ -43,7 +43,8 @@ jobs:
 
       - name: Run LLM Security Scan (Marketplace)
         id: scan
-        uses: spydra-tech/trusys-llm-security-scan-action@main
+        #uses: spydra-tech/trusys-llm-security-scan-action@main
+        uses: spydra-tech/trusys-llm-security-scan-action@v1.0.3
         with:
           python-version: '3.11'
           # Scan only one file in samples (change to your file, e.g. samples/aws/aws_code_injection.py)
