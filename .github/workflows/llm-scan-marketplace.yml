@@ -46,7 +46,7 @@ jobs:
           exclude: 'tests/**,.github/**,**/__pycache__/**,**/.git/**'
           format: 'sarif'
           no-fail-on-findings: 'true'
-          upload-sarif-to-github: 'false'
+          upload-sarif-to-github: 'true'
           # AI analysis: limit to 5 findings
           enable-ai-filter: 'true'
           ai-max-findings: '5'
