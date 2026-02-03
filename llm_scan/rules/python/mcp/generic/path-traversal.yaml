@@ -1,0 +1,127 @@
+rules:
+  # ============================================================================
+  # LLM02/LLM07: Path Traversal - MCP Tool Parameters (Python MCP SDK / FastMCP)
+  # ============================================================================
+  # MCP tools receive arguments from the client/LLM. Using tool parameters
+  # as file paths without validation allows path traversal.
+  #
+  # OWASP: LLM02, LLM07 (Insecure Plugin Design)
+  # CWE: CWE-22
+  # ============================================================================
+
+  - id: mcp-llm02-tool-param-to-file-ops
+    mode: taint
+    pattern-sources:
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG, ...):
+            ...
+    pattern-sinks:
+      - pattern: open($ARG, ...)
+      - pattern: open(..., $ARG, ...)
+      - pattern: Path($ARG)
+      - pattern: os.remove($ARG)
+      - pattern: os.unlink($ARG)
+      - pattern: shutil.copy($ARG, ...)
+      - pattern: shutil.move($ARG, ...)
+    message: "LLM02/LLM07: Path Traversal - MCP tool parameter used in file operations without validation"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: path-traversal
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling (Path Traversal)"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-22"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/22.html"]
+      tags: ["owasp", "llm02", "llm07", "path-traversal", "mcp", "fastmcp", "tool", "ai-enhanced"]
+      technology: ["python", "mcp", "llm"]
+      confidence: "medium"
+      impact: "high"
+      likelihood: "medium"
+      description: "An MCP tool uses one of its parameters as a file path in open(), Path(), or other file operations. Tool arguments are client/LLM-controlled and can contain path traversal sequences (e.g. ../)."
+      remediation: "Validate and sanitize all file paths from tool parameters. Restrict to allowlisted directories, use os.path.abspath() and resolve(), and avoid user-controlled paths for sensitive operations."
+      examples:
+        vulnerable: "samples/mcp/mcp_path_traversal.py"
+      references:
+        - "https://modelcontextprotocol.io"
+    paths:
+      include:
+        - "**/*.py"

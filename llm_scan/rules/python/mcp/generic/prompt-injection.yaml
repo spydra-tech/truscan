@@ -1,0 +1,126 @@
+rules:
+  # ============================================================================
+  # LLM01: Prompt Injection - MCP Tool/Resource Output to LLM (Python MCP SDK)
+  # ============================================================================
+  # MCP tool/resource output or parameters that flow into LLM prompts without
+  # sanitization can enable prompt injection (indirect injection via tool results).
+  #
+  # OWASP: LLM01
+  # CWE: CWE-79, CWE-94
+  # ============================================================================
+
+  - id: mcp-llm01-tool-output-to-llm
+    mode: taint
+    pattern-sources:
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG, ...):
+            ...
+    pattern-sinks:
+      # Tool result or param concatenated into content sent to LLM
+      - pattern: $CLIENT.chat.completions.create(messages=[..., {"content": $ARG}, ...])
+      - pattern: openai.chat.completions.create(messages=[..., {"content": $ARG}, ...])
+      - pattern: $CLIENT.messages.create(..., content=$ARG, ...)
+      - pattern: $LLM.invoke([..., $ARG, ...])
+      - pattern: $LLM.predict($ARG)
+    message: "LLM01: Prompt Injection - MCP tool parameter or output flows into LLM prompt (indirect injection risk)"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: prompt-injection
+      owasp: "LLM01"
+      owasp-title: "Prompt Injection"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM01.html"
+      cwe: ["CWE-79", "CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/79.html", "https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm01", "prompt-injection", "mcp", "tool", "indirect-injection", "ai-enhanced"]
+      technology: ["python", "mcp", "llm"]
+      confidence: "medium"
+      impact: "high"
+      likelihood: "medium"
+      description: "MCP tool parameter or tool output is passed into an LLM prompt (e.g. chat completion messages). Untrusted tool results can contain injected instructions (indirect prompt injection)."
+      remediation: "Sanitize and structure tool output before including in LLM prompts. Use clear delimiters and treat tool results as untrusted data. Validate and limit tool output length."
+      examples:
+        vulnerable: "samples/mcp/mcp_prompt_injection.py"
+      references:
+        - "https://modelcontextprotocol.io"
+    paths:
+      include:
+        - "**/*.py"

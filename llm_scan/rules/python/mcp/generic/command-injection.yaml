@@ -1,0 +1,126 @@
+rules:
+  # ============================================================================
+  # LLM02: Command Injection - MCP Tool Parameters (Python MCP SDK / FastMCP)
+  # ============================================================================
+  # MCP tools receive arguments from the client/LLM. Passing tool parameters
+  # to subprocess/os.system allows command injection.
+  #
+  # OWASP: LLM02, LLM07 (Insecure Plugin Design)
+  # CWE: CWE-78
+  # ============================================================================
+
+  - id: mcp-llm02-tool-param-to-subprocess
+    mode: taint
+    pattern-sources:
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG, ...):
+            ...
+    pattern-sinks:
+      - pattern: subprocess.run($ARG, ...)
+      - pattern: subprocess.call($ARG, ...)
+      - pattern: subprocess.Popen($ARG, ...)
+      - pattern: subprocess.check_output($ARG, ...)
+      - pattern: os.system($ARG)
+      - pattern: os.popen($ARG)
+    message: "LLM02: Command Injection - MCP tool parameter passed to subprocess/os (command injection risk)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: command-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-78"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/78.html"]
+      tags: ["owasp", "llm02", "command-injection", "mcp", "fastmcp", "tool", "subprocess", "ai-enhanced"]
+      technology: ["python", "mcp", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "An MCP tool passes one of its parameters to subprocess or os.system. Tool arguments are controlled by the client/LLM and can lead to command injection."
+      remediation: "Never pass MCP tool parameters directly to subprocess or os.system. Use allowlisted commands, parameterized execution (e.g. list args, shell=False), and strict input validation."
+      examples:
+        vulnerable: "samples/mcp/mcp_command_injection.py"
+      references:
+        - "https://modelcontextprotocol.io"
+    paths:
+      include:
+        - "**/*.py"

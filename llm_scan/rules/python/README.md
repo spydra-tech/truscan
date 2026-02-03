@@ -44,6 +44,14 @@ python/
 │   ├── flask/
 │   ├── django/
 │   └── generic/
+├── mcp/
+│   └── generic/
+│       ├── code-injection.yaml
+│       ├── command-injection.yaml
+│       ├── path-traversal.yaml
+│       ├── prompt-injection.yaml
+│       ├── sql-injection.yaml
+│       └── ssrf.yaml
 ├── google/
 │   ├── flask/
 │   ├── django/
@@ -232,6 +240,10 @@ metadata:
   - Training Data Poisoning
   - Model DoS
   - Sensitive Info Disclosure
+
+### ✅ MCP (Python SDK / FastMCP)
+- Code Injection, Command Injection, Path Traversal, Prompt Injection, SSRF, SQL Injection
+- Sources: `@mcp.tool()`, `@mcp.async_tool()`, `@mcp.resource(...)`, `@mcp.prompt()` handler parameters
 
 ### 🚧 In Progress
 - Anthropic rules

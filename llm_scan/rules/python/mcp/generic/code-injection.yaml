@@ -1,0 +1,235 @@
+rules:
+  # ============================================================================
+  # LLM02: Code Injection - MCP Tool/Resource/Prompt Parameters (Python MCP SDK)
+  # ============================================================================
+  # MCP @tool(), @async_tool(), @resource(), @prompt() handlers receive
+  # arguments from the client/LLM. Passing those parameters to eval/exec/compile
+  # allows arbitrary code execution.
+  #
+  # OWASP: LLM02, LLM07 (Insecure Plugin Design)
+  # CWE: CWE-94
+  # ============================================================================
+
+  - id: mcp-llm02-tool-param-to-eval
+    mode: taint
+    pattern-sources:
+      # @mcp.tool() / @app.tool()
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG, ...):
+            ...
+      # @mcp.async_tool()
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG, ...):
+            ...
+      # @mcp.resource(...)
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG, ...):
+            ...
+      # @mcp.prompt()
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG, ...):
+            ...
+    pattern-sinks:
+      - pattern: eval($ARG)
+      - pattern: exec($ARG)
+      - pattern: compile($ARG, ...)
+    message: "LLM02: Code Injection - MCP tool parameter passed to eval/exec/compile (arbitrary code execution)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      owasp-url: "https://owasp.org/www-project-top-10-for-large-language-model-applications/LLM_Top_10/LLM02.html"
+      cwe: ["CWE-94"]
+      cwe-url: ["https://cwe.mitre.org/data/definitions/94.html"]
+      tags: ["owasp", "llm02", "code-injection", "mcp", "fastmcp", "tool", "eval", "exec", "ai-enhanced"]
+      technology: ["python", "mcp", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "An MCP tool (decorated with @mcp.tool() or @app.tool()) passes one of its parameters to eval(), exec(), or compile(). Tool arguments are controlled by the client/LLM and can lead to arbitrary code execution."
+      remediation: "Never pass MCP tool parameters to eval/exec/compile. Validate and sanitize all tool inputs. Use safe parsing (e.g. AST, allowlisted operations) or structured data instead of executing code from tool arguments."
+      examples:
+        vulnerable: "samples/mcp/mcp_code_injection.py"
+      references:
+        - "https://modelcontextprotocol.io"
+        - "https://github.com/modelcontextprotocol/python-sdk"
+    paths:
+      include:
+        - "**/*.py"
+
+  - id: mcp-llm02-tool-param-to-exec-globals
+    mode: taint
+    pattern-sources:
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.tool()
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.async_tool()
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.resource(...)
+          def $FN(..., $ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN($ARG, ...):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG):
+            ...
+      - pattern: $ARG
+        pattern-inside: |
+          @$MCP.prompt()
+          def $FN(..., $ARG, ...):
+            ...
+    pattern-sinks:
+      - pattern: exec($ARG, ...)
+      - pattern: eval($ARG, ...)
+    message: "LLM02: Code Injection - MCP tool parameter passed to eval/exec with globals/locals"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: code-injection
+      owasp: "LLM02"
+      owasp-title: "Insecure Output Handling"
+      cwe: ["CWE-94"]
+      tags: ["owasp", "llm02", "code-injection", "mcp", "tool", "eval", "exec"]
+      technology: ["python", "mcp", "llm"]
+      confidence: "high"
+      impact: "critical"
+      likelihood: "high"
+      description: "MCP tool parameter is passed to eval() or exec() with custom globals/locals, enabling code execution."
+      remediation: "Do not execute tool parameters as code. Validate and restrict tool inputs."
+    paths:
+      include:
+        - "**/*.py"

@@ -16,6 +16,7 @@ A Python-based code scanning tool that uses the Semgrep Python SDK to detect AI/
 - **Offline-first**: All scanning runs without network access
 - **Multiple Output Formats**: SARIF (for GitHub Code Scanning), JSON (for VS Code), and human-readable console output
 - **Extensible Rule System**: Easy to add new rule packs and vulnerability patterns
+- **MCP (Model Context Protocol)**: Rules for Python MCP SDK / FastMCP (`@tool`, `@async_tool`, `@resource`, `@prompt`) – code/command/path injection, SSRF, SQL injection, prompt injection
 - **Performance Optimized**: Incremental scanning, respects .gitignore, configurable include/exclude patterns
 
 ## Installation
@@ -231,6 +232,37 @@ The scanner detects vulnerabilities based on the **OWASP Top 10 for LLM Applicat
 
 Rules are organized by provider in `python/{provider}/generic/` directories.
 
+### MCP (Model Context Protocol) – Python SDK
+
+The scanner includes rules for **MCP servers** built with the [Python MCP SDK](https://github.com/modelcontextprotocol/python-sdk) (FastMCP). Handler parameters for tools, resources, and prompts are treated as untrusted (client/LLM-controlled) and checked for unsafe use.
+
+**Decorators covered:**
+
+- `@mcp.tool()` – sync tool handlers  
+- `@mcp.async_tool()` – async tool handlers  
+- `@mcp.resource(...)` – resource URI handlers (e.g. `@mcp.resource("file:///docs/{filename}")`)  
+- `@mcp.prompt()` – prompt template handlers  
+
+**Vulnerability rules:**
+
+- **Code injection** – handler params → `eval()` / `exec()` / `compile()`
+- **Command injection** – handler params → `subprocess` / `os.system`
+- **Path traversal** – handler params → `open()` / `Path()` / file ops
+- **Prompt injection** – handler output/params → LLM `messages` / `content`
+- **SSRF** – handler params (URLs) → `requests.get` / `urllib.request.urlopen` / `httpx`
+- **SQL injection** – handler params → raw `cursor.execute()`
+
+**Rule pack:** `llm_scan/rules/python/mcp/generic/`  
+**Sample servers:** `samples/mcp/` – vulnerable examples for each pattern (see [samples/mcp/README.md](samples/mcp/README.md)).
+
+```bash
+# Scan MCP server code
+python -m llm_scan.runner . --rules llm_scan/rules/python/mcp --format console
+
+# Run against included MCP samples
+python -m llm_scan.runner samples/mcp --rules llm_scan/rules/python/mcp --format console
+```
+
 ## Project Structure
 
 ```
@@ -275,8 +307,18 @@ llm_scan/
         │       ├── code-injection.yaml
         │       ├── inventory.yaml
         │       └── taint-sources.yaml
+        ├── mcp/           # MCP (Model Context Protocol) Python SDK / FastMCP
+        │   └── generic/
+        │       ├── code-injection.yaml
+        │       ├── command-injection.yaml
+        │       ├── path-traversal.yaml
+        │       ├── prompt-injection.yaml
+        │       ├── ssrf.yaml
+        │       └── sql-injection.yaml
         └── [other providers]/  # Additional LLM providers
 ```
+
+The repository also includes **sample code** for testing rules, including vulnerable MCP servers under `samples/mcp/` (see [samples/mcp/README.md](samples/mcp/README.md)).
 
 ## Adding New Rules
 
