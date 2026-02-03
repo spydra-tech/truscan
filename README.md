@@ -35,8 +35,8 @@ For development or if you need the latest version:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/code-scan2.git
-cd code-scan2
+git clone https://github.com/spydra-tech/truscan.git
+cd truscan
 
 # Install dependencies
 pip install semgrep requests
