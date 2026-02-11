@@ -94,8 +94,10 @@ rules:
             ...
     pattern-sinks:
       # Tool result or param concatenated into content sent to LLM
-      - pattern: $CLIENT.chat.completions.create(messages=[..., {"content": $ARG}, ...])
-      - pattern: openai.chat.completions.create(messages=[..., {"content": $ARG}, ...])
+      - pattern: |
+          $CLIENT.chat.completions.create(messages=[..., {"content": $ARG}, ...])
+      - pattern: |
+          openai.chat.completions.create(messages=[..., {"content": $ARG}, ...])
       - pattern: $CLIENT.messages.create(..., content=$ARG, ...)
       - pattern: $LLM.invoke([..., $ARG, ...])
       - pattern: $LLM.predict($ARG)

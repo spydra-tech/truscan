@@ -191,3 +191,96 @@ class ScanResponse:
             "success": False,
             "error": self.error,
         }
+
+
+# ---------------------------------------------------------------------------
+# FastMCP evaluation test generation
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class MCPToolParameter:
+    """Parameter of an MCP tool."""
+
+    name: str
+    type: str  # e.g. "str", "int"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"name": self.name, "type": self.type}
+
+
+@dataclass
+class MCPToolDefinition:
+    """Extracted FastMCP tool/resource/prompt handler definition."""
+
+    name: str
+    description: str
+    parameters: List[MCPToolParameter]
+    decorator: str  # "tool" | "async_tool" | "resource" | "prompt"
+    source_file: Optional[str] = None
+    line: Optional[int] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {
+            "name": self.name,
+            "description": self.description,
+            "parameters": [p.to_dict() for p in self.parameters],
+            "decorator": self.decorator,
+        }
+        if self.source_file is not None:
+            d["source_file"] = self.source_file
+        if self.line is not None:
+            d["line"] = self.line
+        return d
+
+    def to_manifest_dict(self) -> Dict[str, Any]:
+        """Minimal dict for AI payload (no paths)."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "parameters": [p.to_dict() for p in self.parameters],
+            "decorator": self.decorator,
+        }
+
+
+@dataclass
+class EvalTestCase:
+    """Single evaluation test case: prompt + expected tool + ground truth."""
+
+    prompt: str
+    expected_tool: str
+    ground_truth: str
+    expected_args: Optional[Dict[str, Any]] = None
+    category: Optional[str] = None  # e.g. "tool-invocation", "security"
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {
+            "prompt": self.prompt,
+            "expected_tool": self.expected_tool,
+            "ground_truth": self.ground_truth,
+        }
+        if self.expected_args is not None:
+            d["expected_args"] = self.expected_args
+        if self.category is not None:
+            d["category"] = self.category
+        return d
+
+
+@dataclass
+class EvalTestResult:
+    """Result of eval test generation: manifest + test cases + metadata."""
+
+    tool_manifest: List[MCPToolDefinition]
+    test_cases: List[EvalTestCase]
+    generation_duration_seconds: Optional[float] = None
+    ai_model_used: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "tool_manifest": [t.to_dict() for t in self.tool_manifest],
+            "test_cases": [tc.to_dict() for tc in self.test_cases],
+            "meta": {
+                "generation_duration_seconds": self.generation_duration_seconds,
+                "ai_model_used": self.ai_model_used,
+            },
+        }

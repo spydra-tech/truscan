@@ -511,6 +511,22 @@ def main() -> int:
         action="store_true",
         help="Always exit 0 even when findings exist (useful for report-only / CI where job should succeed).",
     )
+    # Eval test generation (FastMCP)
+    parser.add_argument(
+        "--generate-eval-tests",
+        action="store_true",
+        help="Generate evaluation test cases for FastMCP tools (extracts tools, then uses AI to generate prompts). Requires --ai-provider and API key.",
+    )
+    parser.add_argument(
+        "--eval-test-out",
+        help="Output path for eval test cases JSON (used with --generate-eval-tests)",
+    )
+    parser.add_argument(
+        "--eval-test-max-prompts",
+        type=int,
+        default=3,
+        help="Max prompts per tool for eval test generation (default: 3)",
+    )
 
     args = parser.parse_args()
 
@@ -523,9 +539,8 @@ def main() -> int:
         log_level = logging.DEBUG
     elif args.verbose:
         log_level = logging.INFO
-    elif args.enable_ai_filter:
-        # Automatically enable INFO logging when AI filtering is enabled
-        # so users can see AI analysis progress
+    elif args.enable_ai_filter or args.generate_eval_tests:
+        # Automatically enable INFO logging when AI filtering or eval test generation is enabled
         log_level = logging.INFO
     
     logging.basicConfig(
@@ -567,9 +582,9 @@ def main() -> int:
     ]
     exclude_patterns = args.exclude + default_excludes if args.exclude else default_excludes
     
-    # Get AI API key from args or environment
+    # Get AI API key from args or environment (needed for AI filter or eval test generation)
     ai_api_key = args.ai_api_key
-    if not ai_api_key and args.enable_ai_filter:
+    if not ai_api_key and (args.enable_ai_filter or args.generate_eval_tests):
         if args.ai_provider == "openai":
             ai_api_key = os.getenv("OPENAI_API_KEY")
         elif args.ai_provider == "anthropic":
@@ -593,6 +608,9 @@ def main() -> int:
         ai_confidence_threshold=args.ai_confidence_threshold,
         ai_analyze_rules=args.ai_analyze_rules,
         ai_max_findings=args.ai_max_findings,
+        enable_eval_test_generation=args.generate_eval_tests,
+        eval_test_output=args.eval_test_out,
+        eval_test_max_prompts_per_tool=args.eval_test_max_prompts,
     )
 
     # Setup uploader if requested
@@ -622,6 +640,42 @@ def main() -> int:
     try:
         logger.info("")
         result = run_scan(config, uploader)
+
+        # Eval test generation (FastMCP): extract tools, generate prompts via AI, write JSON
+        if config.enable_eval_test_generation:
+            import json as _json
+            from .engine.eval_prompt_generator import run_eval_test_generation
+            from .models import EvalTestResult
+
+            logger.info("")
+            logger.info("Eval test generation (FastMCP)...")
+            py_files = [f for f in result.scanned_files if f.endswith(".py")]
+            if not py_files:
+                logger.warning("No Python files in scan; skipping eval test generation")
+            else:
+                tools, cases, duration, model = run_eval_test_generation(
+                    py_files,
+                    config,
+                    max_prompts_per_tool=config.eval_test_max_prompts_per_tool,
+                )
+                eval_result = EvalTestResult(
+                    tool_manifest=tools,
+                    test_cases=cases,
+                    generation_duration_seconds=duration,
+                    ai_model_used=model,
+                )
+                if config.eval_test_output:
+                    out_path = Path(config.eval_test_output)
+                    out_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(out_path, "w", encoding="utf-8") as f:
+                        _json.dump(eval_result.to_dict(), f, indent=2)
+                    logger.info("Wrote eval test cases to %s", config.eval_test_output)
+                logger.info(
+                    "Eval test generation: %d tool(s), %d test case(s) in %.2fs",
+                    len(tools),
+                    len(cases),
+                    duration,
+                )
 
         # Format output
         logger.info("")

@@ -4,6 +4,25 @@ This directory contains reusable GitHub Actions workflows for scanning code with
 
 ## Available Workflows
 
+### `llm-scan-marketplace.yml`
+
+Runs the LLM Security Scan using the [trusys-llm-security-scan-action](https://github.com/spydra-tech/trusys-llm-security-scan-action) from GitHub Marketplace. Use this for full CI integration: SARIF upload to GitHub Code Scanning, optional AI analysis, and optional upload to your backend.
+
+**Triggers:** Push to `main`, tags `scan/v*.*.*` or `release/scan-*`, or `workflow_dispatch`.
+
+**Typical inputs (see workflow file):**
+- `paths`: Paths to scan (e.g. `samples/azure/azure_code_injection.py` or `.`)
+- `exclude`: Exclude patterns
+- `format`: `sarif`
+- `no-fail-on-findings`: `true` to avoid failing the job when findings exist
+- `upload-sarif-to-github`: `true` to upload SARIF to Security → Code scanning
+- `enable-ai-filter`, `ai-provider`, `ai-model`, `ai-api-key`, etc. for AI analysis
+- `upload-endpoint`, `application-id`, `api-key` for backend upload
+
+**Secrets:** `OPENAI_API_KEY` (or Anthropic), `LLM_SCAN_UPLOAD_ENDPOINT`, `LLM_SCAN_APPLICATION_ID`, `LLM_SCAN_API_KEY` as needed.
+
+**Eval test generation:** FastMCP evaluation test generation (`--generate-eval-tests`) is not wired in this workflow. Run it locally or add a separate job that runs the scanner with `--generate-eval-tests --eval-test-out eval_tests.json` and uploads the artifact.
+
 ### `llm-scan-reusable.yml`
 
 A reusable workflow that can be called from any repository to scan code for LLM-specific vulnerabilities.

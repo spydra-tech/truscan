@@ -17,6 +17,8 @@ A Python-based code scanning tool that uses the Semgrep Python SDK to detect AI/
 - **Multiple Output Formats**: SARIF (for GitHub Code Scanning), JSON (for VS Code), and human-readable console output
 - **Extensible Rule System**: Easy to add new rule packs and vulnerability patterns
 - **MCP (Model Context Protocol)**: Rules for Python MCP SDK / FastMCP (`@tool`, `@async_tool`, `@resource`, `@prompt`) – code/command/path injection, SSRF, SQL injection, prompt injection
+- **Test Case Generation**: Automatically generates security test cases by extracting system prompts, tool definitions (MCP, LangChain), and detecting dangerous sinks. See [TEST_GENERATION.md](TEST_GENERATION.md) for details.
+- **FastMCP evaluation test generation**: Extract tool definitions from FastMCP code (no AI), then use AI with only a compact tool manifest to generate natural-language prompts that should trigger each tool; output JSON for evaluation harnesses. See [TEST_GENERATION.md](TEST_GENERATION.md#fastmcp-evaluation-test-generation).
 - **Performance Optimized**: Incremental scanning, respects .gitignore, configurable include/exclude patterns
 
 ## Installation
@@ -97,6 +99,28 @@ python -m llm_scan.runner \
   --ai-analyze-rules openai-prompt-injection-direct \
   --ai-analyze-rules openai-excessive-agency-file-deletion \
   --format console
+
+# Generate security test cases (extracts tools, system prompts, generates test cases)
+python -m llm_scan.runner \
+  . \
+  --generate-tests \
+  --format console
+
+# Generate test cases with AI enhancement
+python -m llm_scan.runner \
+  . \
+  --generate-tests \
+  --enable-ai-filter \
+  --ai-provider openai \
+  --ai-model gpt-4 \
+  --test-max-cases 30
+
+# Generate FastMCP evaluation tests (extract tools, AI generates prompts per tool, write JSON)
+python -m llm_scan.runner samples/mcp \
+  --generate-eval-tests \
+  --eval-test-out eval_tests.json \
+  --ai-provider openai \
+  --ai-model gpt-4
 ```
 
 ### Python Library Usage
@@ -261,6 +285,9 @@ python -m llm_scan.runner . --rules llm_scan/rules/python/mcp --format console
 
 # Run against included MCP samples
 python -m llm_scan.runner samples/mcp --rules llm_scan/rules/python/mcp --format console
+
+# Generate evaluation test cases for FastMCP (prompts that should trigger each tool)
+python -m llm_scan.runner samples/mcp --generate-eval-tests --eval-test-out eval_tests.json
 ```
 
 ## Project Structure
@@ -274,7 +301,9 @@ llm_scan/
 ├── engine/
 │   ├── semgrep_engine.py  # Semgrep Python SDK integration
 │   ├── ai_engine.py       # AI-based false positive filtering
-│   └── ai_providers.py    # AI provider implementations (OpenAI, Anthropic)
+│   ├── ai_providers.py    # AI provider implementations (OpenAI, Anthropic)
+│   ├── mcp_extractor.py   # AST-based FastMCP tool extraction (for eval test generation)
+│   └── eval_prompt_generator.py  # AI-powered eval prompt generation (manifest-only payload)
 ├── utils/
 │   └── code_context.py    # Code context extraction for AI analysis
 ├── output/
@@ -547,6 +576,9 @@ python -m llm_scan.runner --paths . --format console
 - `output_file`: Output file path (optional for console)
 - `respect_gitignore`: Whether to respect .gitignore (default: True)
 - `max_target_bytes`: Maximum file size to scan (default: 1MB)
+- `enable_eval_test_generation`: Generate FastMCP evaluation test cases (default: False)
+- `eval_test_output`: Path to write eval test JSON (used with `--generate-eval-tests`)
+- `eval_test_max_prompts_per_tool`: Max prompts per tool for eval generation (default: 3)
 
 ## Extensibility
 

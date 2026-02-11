@@ -12,8 +12,9 @@ A VS Code extension that integrates the LLM Security Scanner to detect AI/LLM-sp
 - 💡 **Remediation Guidance**: Shows remediation suggestions for each finding
 - 📤 **Database Upload** (Optional): Upload scan results to a backend database for tracking and analytics
 - 🤖 **AI Analysis** (Optional): Use AI to filter false positives and enhance remediation suggestions
+- **MCP (FastMCP) support**: Same MCP rules as the CLI—scans `@mcp.tool()`, `@mcp.async_tool()`, `@mcp.resource()`, `@mcp.prompt()` handlers for code/command/path injection, SSRF, SQL injection, and prompt injection
 
-## Installation
+**Note:** FastMCP evaluation test generation (`--generate-eval-tests`) is available in the CLI only; the extension runs the standard security scan. Use the terminal or CI to generate eval test JSON.
 
 ### From Source
 
@@ -373,7 +374,7 @@ The extension detects vulnerabilities from the OWASP LLM Top 10:
 9. **LLM09: Overreliance** - Blind trust in LLM output
 10. **LLM10: Model Theft** - Unauthorized model access
 
-Plus additional code injection and command injection patterns.
+Plus additional code injection and command injection patterns. MCP/FastMCP servers are covered by the same OWASP categories (e.g. LLM02, LLM07 for tool parameter misuse).
 
 ## Troubleshooting
 

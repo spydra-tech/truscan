@@ -73,6 +73,22 @@ Then use:
 trusys-llm-scan . --enable-ai-filter --ai-provider openai --ai-model gpt-4
 ```
 
+## MCP (FastMCP) and evaluation tests
+
+Scan MCP server code with the MCP rule pack:
+
+```bash
+trusys-llm-scan . --rules llm_scan/rules/python/mcp --format console
+```
+
+Generate evaluation test cases for FastMCP tools (extract tools, then AI generates prompts per tool; requires an AI API key):
+
+```bash
+trusys-llm-scan samples/mcp --generate-eval-tests --eval-test-out eval_tests.json --ai-provider openai
+```
+
+See [TEST_GENERATION.md](TEST_GENERATION.md) for details.
+
 ## More Information
 
 See the [README.md](README.md) for full documentation.

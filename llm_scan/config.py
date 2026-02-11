@@ -36,6 +36,10 @@ class ScanConfig:
     ai_cache_enabled: bool = True  # Cache AI responses
     ai_analyze_rules: Optional[List[str]] = None  # Specific rules to analyze (None = all)
     ai_max_findings: Optional[int] = None  # Maximum number of findings to analyze (None = unlimited)
+    # Eval test generation (FastMCP)
+    enable_eval_test_generation: bool = False
+    eval_test_output: Optional[str] = None  # Path to write eval test JSON
+    eval_test_max_prompts_per_tool: int = 3
 
     @classmethod
     def from_dict(cls, data: dict) -> "ScanConfig":
@@ -65,6 +69,9 @@ class ScanConfig:
             ai_cache_enabled=data.get("ai_cache_enabled", True),
             ai_analyze_rules=data.get("ai_analyze_rules"),
             ai_max_findings=data.get("ai_max_findings"),
+            enable_eval_test_generation=data.get("enable_eval_test_generation", False),
+            eval_test_output=data.get("eval_test_output"),
+            eval_test_max_prompts_per_tool=data.get("eval_test_max_prompts_per_tool", 3),
         )
 
     def get_default_rules_dir(self) -> str:

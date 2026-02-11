@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="trusys-llm-scan",
-    version="1.0.5",
+    version="1.0.7",
     author="Spydra",
     author_email="manish@trusys.ai",
     description="A Python-based code scanning tool for AI/LLM-specific vulnerabilities",
