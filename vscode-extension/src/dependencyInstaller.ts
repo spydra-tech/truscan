@@ -235,6 +235,22 @@ export class DependencyInstaller {
         // Resolve path variables
         let effectivePythonPath = resolvePathVariables(pythonPath);
         
+        // If path points to old .llm-scan-venv and it doesn't exist, switch to system Python
+        if (effectivePythonPath.includes('.llm-scan-venv')) {
+            if (!fs.existsSync(effectivePythonPath)) {
+                progress?.('Old extension venv not found; using system Python...');
+                effectivePythonPath = 'python3';
+                const config = vscode.workspace.getConfiguration('llmSecurityScanner');
+                await config.update('pythonPath', 'python3', vscode.ConfigurationTarget.Workspace);
+            } else {
+                // Venv exists but we don't want to use it - switch to system Python
+                progress?.('Switching from extension venv to system Python...');
+                effectivePythonPath = 'python3';
+                const config = vscode.workspace.getConfiguration('llmSecurityScanner');
+                await config.update('pythonPath', 'python3', vscode.ConfigurationTarget.Workspace);
+            }
+        }
+        
         // Check if resolved path exists (for file paths, not command names like 'python3')
         if (effectivePythonPath.includes('/') || effectivePythonPath.includes('\\')) {
             if (!fs.existsSync(effectivePythonPath)) {
@@ -247,8 +263,6 @@ export class DependencyInstaller {
             }
         }
         
-        let venvCreated = false;
-
         progress?.('Checking Python dependencies...');
 
         // Always check and install semgrep (required dependency)
@@ -259,123 +273,70 @@ export class DependencyInstaller {
             
             if (semgrepResult.success) {
                 result.installed.push('semgrep');
-                progress?.('semgrep installed successfully');
-            } else if (semgrepResult.externallyManaged) {
-                // Externally managed environment - create venv
-                progress?.('Detected externally-managed Python environment. Creating virtual environment...');
-                
-                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-                if (!workspaceFolder) {
-                    result.failed.push('semgrep');
-                    result.success = false;
-                    result.message += 'Cannot create virtual environment: No workspace folder found.\n';
-                    return result;
-                }
-
-                const venvPath = path.join(workspaceFolder.uri.fsPath, '.llm-scan-venv');
-                const venvResult = await this.createVirtualEnvironment(pythonPath, venvPath);
-                
-                if (venvResult.success && venvResult.venvPythonPath) {
-                    effectivePythonPath = venvResult.venvPythonPath;
-                    result.venvPath = venvPath;
-                    result.pythonPath = venvResult.venvPythonPath;
-                    venvCreated = true;
-                    progress?.('Virtual environment created. Installing dependencies...');
-                    
-                    // Retry semgrep installation in venv (REQUIRED)
-                    progress?.('Installing semgrep in virtual environment...');
-                    const retryResult = await this.installPackage(effectivePythonPath, 'semgrep');
-                    if (retryResult.success) {
-                        result.installed.push('semgrep');
-                        progress?.('✓ semgrep installed in virtual environment');
-                    } else {
-                        result.failed.push('semgrep');
-                        result.success = false;
-                        result.message += `Failed to install semgrep (required dependency) in virtual environment: ${retryResult.error}\n`;
-                    }
-                } else {
-                    result.failed.push('semgrep');
-                    result.success = false;
-                    result.message += `Failed to create virtual environment: ${venvResult.error}\n`;
-                    return result;
-                }
+                progress?.('✓ semgrep installed successfully');
             } else {
                 result.failed.push('semgrep');
                 result.success = false;
-                result.message += `Failed to install semgrep (required dependency): ${semgrepResult.error}\n` +
+                const errorDetail = semgrepResult.error ? `: ${semgrepResult.error.substring(0, 300)}` : '';
+                result.message += `Failed to install semgrep (required dependency)${errorDetail}\n` +
                     `Please install manually: ${effectivePythonPath} -m pip install semgrep\n`;
             }
         } else {
             progress?.('✓ semgrep is already installed');
         }
 
-        // Check llm_scan (optional - only if installLlmScan is true)
-        // Note: semgrep is always installed above (required), trusys-llm-scan is optional
+        // Check and install scanner (required when installLlmScan is true)
         if (installLlmScan) {
             const llmScanInstalled = await this.checkPackageInstalled(effectivePythonPath, 'trusys-llm-scan');
             if (!llmScanInstalled) {
-                progress?.('Installing trusys-llm-scan (optional - can be installed manually if needed)...');
-                
-                // Try to find project root for local installation
+                progress?.('Installing LLM Security Scanner...');
                 const projectRoot = this.findProjectRoot();
-                
+                let installAttempted = false;
                 if (projectRoot) {
-                    // Install from local path
+                    installAttempted = true;
                     const installResult = await this.installPackage(effectivePythonPath, 'trusys-llm-scan', projectRoot);
                     if (installResult.success) {
                         result.installed.push('trusys-llm-scan (from local source)');
-                        progress?.('✓ trusys-llm-scan installed from local source');
-                    } else if (installResult.externallyManaged && !venvCreated) {
-                        // Should not happen if we already created venv, but handle it
-                        result.failed.push('trusys-llm-scan');
-                        // Don't mark as failure - trusys-llm-scan is optional, semgrep is required
-                        result.message += `Note: trusys-llm-scan installation failed (optional). You can install manually if needed.\n`;
+                        progress?.('✓ Scanner installed from workspace');
                     } else {
                         result.failed.push('trusys-llm-scan');
-                        // Don't mark as failure - trusys-llm-scan is optional
-                        result.message += `Note: trusys-llm-scan installation failed (optional): ${installResult.error}\n`;
+                        const errorDetail = installResult.error ? `: ${installResult.error.substring(0, 300)}` : '';
+                        result.message += `Scanner installation failed${errorDetail}\n` +
+                            `Please install manually: ${effectivePythonPath} -m pip install -e ${projectRoot}\n`;
                     }
                 } else {
-                    // Try installing from PyPI (if published)
+                    installAttempted = true;
                     const installResult = await this.installPackage(effectivePythonPath, 'trusys-llm-scan');
                     if (installResult.success) {
                         result.installed.push('trusys-llm-scan (from PyPI)');
-                        progress?.('✓ trusys-llm-scan installed from PyPI');
+                        progress?.('✓ Scanner installed from PyPI');
                     } else {
                         result.failed.push('trusys-llm-scan');
-                        // Don't mark as failure - trusys-llm-scan is optional
-                        result.message += `Note: trusys-llm-scan not found in PyPI (optional). Install manually if needed:\n` +
-                            `  ${effectivePythonPath} -m pip install -e /path/to/code-scan2\n`;
+                        const errorDetail = installResult.error ? `: ${installResult.error.substring(0, 300)}` : '';
+                        result.message += `Scanner installation failed${errorDetail}\n` +
+                            `Please install manually: ${effectivePythonPath} -m pip install trusys-llm-scan\n`;
+                    }
+                }
+                // Verify installation succeeded
+                if (installAttempted && !result.failed.includes('trusys-llm-scan')) {
+                    const verifyInstalled = await this.checkPackageInstalled(effectivePythonPath, 'trusys-llm-scan');
+                    if (!verifyInstalled) {
+                        result.failed.push('trusys-llm-scan');
+                        result.message += 'Scanner installation reported success but package not found after install.\n';
                     }
                 }
             } else {
-                progress?.('✓ trusys-llm-scan is already installed');
+                progress?.('✓ Scanner is already installed');
             }
-        } else {
-            progress?.('Skipping trusys-llm-scan installation (autoInstallDependencies is disabled)');
         }
 
-        if (venvCreated) {
-            result.message = `Created virtual environment at ${result.venvPath}. `;
-            if (result.installed.length > 0) {
-                result.message += `Successfully installed: ${result.installed.join(', ')}. `;
-            }
-            result.message += `VS Code will use the virtual environment Python: ${result.pythonPath}`;
-        } else if (result.installed.length > 0) {
-            result.message = `Successfully installed: ${result.installed.join(', ')}`;
+        if (result.installed.length > 0) {
+            result.message = `Ready. Installed: ${result.installed.join(', ')}`;
         } else if (result.failed.length === 0) {
-            result.message = 'All dependencies are already installed (semgrep is ready)';
+            result.message = 'Scanner is ready';
         }
         
-        // If semgrep failed but trusys-llm-scan succeeded, still mark as partial success
-        // semgrep is required, trusys-llm-scan is optional
-        if (result.failed.includes('semgrep')) {
-            result.success = false; // semgrep failure is critical
-        } else if (result.failed.includes('trusys-llm-scan') && result.installed.includes('semgrep')) {
-            // semgrep succeeded, trusys-llm-scan failed - this is okay
-            result.success = true;
-        }
-
+        result.success = !result.failed.includes('semgrep') && !result.failed.includes('trusys-llm-scan');
         return result;
     }
 

@@ -4,18 +4,23 @@ import { Scanner } from './scanner';
 import { Finding } from './models';
 import { logger } from './logger';
 
+export type EnsureScannerReady = (progress?: (message: string) => void) => Promise<{ success: boolean; error?: string }>;
+
 export class DiagnosticProvider {
     private diagnosticCollection: vscode.DiagnosticCollection;
     private scanner: Scanner;
+    private ensureScannerReady: EnsureScannerReady | undefined;
     private scanDelay: number = 500;
     private scanTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
     constructor(
         diagnosticCollection: vscode.DiagnosticCollection,
-        scanner: Scanner
+        scanner: Scanner,
+        ensureScannerReady?: EnsureScannerReady
     ) {
         this.diagnosticCollection = diagnosticCollection;
         this.scanner = scanner;
+        this.ensureScannerReady = ensureScannerReady;
 
         const config = vscode.workspace.getConfiguration('llmSecurityScanner');
         this.scanDelay = config.get<number>('scanDelay', 500);
@@ -119,10 +124,69 @@ export class DiagnosticProvider {
                 logger.log(`Scanner response received. Success: ${response.success}`);
 
                 if (!response.success || !response.result) {
-                    logger.error(`Scan failed: ${response.error || 'Unknown error'}`);
+                    const err = response.error || 'Unknown error';
+                    const isPackageMissing = err.includes('llm_scan package not found');
+                    if (isPackageMissing && this.ensureScannerReady) {
+                        logger.log('Scanner not ready; setting up automatically...');
+                        let setupResult: { success: boolean; error?: string } = { success: false };
+                        const setupSuccess = await vscode.window.withProgress(
+                            {
+                                location: vscode.ProgressLocation.Notification,
+                                title: 'LLM Security Scanner: Setting up...',
+                                cancellable: false
+                            },
+                            async (progress) => {
+                                try {
+                                    setupResult = await this.ensureScannerReady!((msg) => {
+                                        progress.report({ message: msg });
+                                        logger.log(`Setup: ${msg}`);
+                                    });
+                                    logger.log(`Auto-setup completed. Success: ${setupResult.success}`);
+                                    if (!setupResult.success && setupResult.error) {
+                                        logger.error(`Auto-setup failed: ${setupResult.error}`);
+                                    }
+                                    return setupResult.success;
+                                } catch (error: any) {
+                                    logger.error(`Auto-setup exception: ${error.message}`);
+                                    setupResult = { success: false, error: error.message };
+                                    return false;
+                                }
+                            }
+                        );
+                        if (setupSuccess) {
+                            logger.log('Auto-setup succeeded; retrying scan...');
+                            const retry = await this.scanner.scanFileOrPath(document.uri.fsPath);
+                            if (retry.success && retry.result) {
+                                logger.log('Retry scan succeeded');
+                                const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+                                const workspaceRoot = workspaceFolder?.uri.fsPath || '';
+                                const relativePath = path.relative(workspaceRoot, document.uri.fsPath);
+                                const fileFindings = retry.result.findings.filter(
+                                    (f) =>
+                                        f.location.file_path === document.uri.fsPath ||
+                                        f.location.file_path === relativePath ||
+                                        f.location.file_path === document.uri.fsPath.replace(workspaceRoot + path.sep, '')
+                                );
+                                const diagnostics = fileFindings.map((f) => this.findingToDiagnostic(f, document));
+                                this.diagnosticCollection.set(document.uri, diagnostics);
+                                return;
+                            } else {
+                                logger.error(`Retry scan failed: ${retry.error || 'Unknown error'}`);
+                            }
+                        } else {
+                            logger.error(`Auto-setup failed. Error: ${setupResult.error || 'Unknown error'}`);
+                        }
+                    }
+                    logger.error(`Scan failed: ${err}`);
+                    const shortMsg = isPackageMissing
+                        ? 'Scanner not installed. Automatic setup failed or was skipped. Run **LLM Security: Install Dependencies** or see Output for details.'
+                        : err;
                     vscode.window.showErrorMessage(
-                        `LLM Security Scanner error: ${response.error || 'Unknown error'}`
-                    );
+                        `LLM Security Scanner: ${shortMsg}`,
+                        'View Logs'
+                    ).then((choice) => {
+                        if (choice === 'View Logs') logger.show();
+                    });
                     return;
                 }
 
@@ -210,18 +274,34 @@ export class DiagnosticProvider {
 
                     const response = await this.scanner.scanWorkspace();
 
+                    let responseToUse = response;
                     if (!response.success || !response.result) {
-                        vscode.window.showErrorMessage(
-                            `LLM Security Scanner error: ${response.error || 'Unknown error'}`
-                        );
-                        return;
+                        const err = response.error || 'Unknown error';
+                        const isPackageMissing = err.includes('llm_scan package not found');
+                        if (isPackageMissing && this.ensureScannerReady) {
+                            progress.report({ message: 'Setting up scanner...' });
+                            const setupSuccess = await this.ensureScannerReady((msg) => progress.report({ message: msg }));
+                            if (setupSuccess.success) {
+                                responseToUse = await this.scanner.scanWorkspace();
+                            }
+                        }
+                        if (!responseToUse.success || !responseToUse.result) {
+                            const errMsg = responseToUse.error || 'Unknown error';
+                            logger.error(`Scan failed: ${errMsg}`);
+                            const shortMsg = errMsg.includes('llm_scan package not found')
+                                ? 'Scanner not installed. Automatic setup failed or was skipped. Run **LLM Security: Install Dependencies** or see Output for details.'
+                                : errMsg;
+                            vscode.window.showErrorMessage(`LLM Security Scanner: ${shortMsg}`, 'View Logs')
+                                .then((choice) => { if (choice === 'View Logs') logger.show(); });
+                            return;
+                        }
                     }
 
                     progress.report({ increment: 50, message: 'Processing results...' });
 
                     // Group findings by file
                     const findingsByFile = new Map<string, Finding[]>();
-                    for (const finding of response.result.findings) {
+                    for (const finding of responseToUse.result!.findings) {
                         const filePath = finding.location.file_path;
                         if (!findingsByFile.has(filePath)) {
                             findingsByFile.set(filePath, []);
@@ -251,9 +331,9 @@ export class DiagnosticProvider {
                     // Note: Database upload is now handled by a separate command
                     // See "Scan and Upload to Database" command
 
-                    if (response.result) {
-                        const totalFindings = response.result.findings.length;
-                        const criticalCount = response.result.findings.filter(
+                    if (responseToUse.result) {
+                        const totalFindings = responseToUse.result.findings.length;
+                        const criticalCount = responseToUse.result.findings.filter(
                             (f) => f.severity === 'critical' || f.severity === 'error'
                         ).length;
 

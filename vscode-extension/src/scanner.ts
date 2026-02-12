@@ -126,34 +126,14 @@ export class Scanner {
                     if (code !== 0) {
                         if (stderr.includes('No module named') || stderr.includes('ModuleNotFoundError')) {
                             if (stderr.includes('llm_scan')) {
-                                // Try to find the project root
                                 const projectRoot = this.findProjectRoot(workspaceRoot);
                                 const installPath = projectRoot || '/path/to/code-scan2';
-                                
-                                // Detect if we're in a virtual environment
-                                const isVenv = resolvedPath.includes('venv') || resolvedPath.includes('.venv');
-                                const venvPath = isVenv ? path.dirname(path.dirname(resolvedPath)) : null;
-                                
-                                let errorMsg = `llm_scan package not found in Python environment at "${resolvedPath}".\n\n`;
-                                
-                                if (isVenv && venvPath) {
-                                    errorMsg += `You're using a virtual environment at: ${venvPath}\n\n`;
-                                    errorMsg += `To install:\n`;
-                                    errorMsg += `  1. Activate your venv: source ${path.join(venvPath, 'bin', 'activate')}\n`;
-                                    errorMsg += `  2. Install: pip install -e ${installPath}\n`;
-                                    errorMsg += `  3. Verify: ${pythonPath} -m llm_scan.runner --help\n`;
-                                } else {
-                                    errorMsg += `To install:\n`;
-                                    errorMsg += `  ${pythonPath} -m pip install -e ${installPath}\n\n`;
-                                    errorMsg += `Or if using a virtual environment:\n`;
-                                    errorMsg += `  1. Activate your venv: source venv/bin/activate\n`;
-                                    errorMsg += `  2. Install: pip install -e ${installPath}\n`;
-                                    errorMsg += `  3. Update VS Code setting: llmSecurityScanner.pythonPath = "venv/bin/python"`;
-                                }
-                                
+                                let fullMsg = `llm_scan package not found in Python environment at "${resolvedPath}".\n\n`;
+                                fullMsg += `To install: ${pythonPath} -m pip install -e ${installPath}\n\nOr run **LLM Security: Install Dependencies** from the Command Palette (Ctrl+Shift+P / Cmd+Shift+P).`;
+                                logger.log(fullMsg);
                                 resolve({
                                     valid: false,
-                                    error: errorMsg
+                                    error: `llm_scan package not found in Python at "${resolvedPath}". Run **LLM Security: Install Dependencies** from the Command Palette, or see Output for manual install.`
                                 });
                             } else if (stderr.includes('semgrep')) {
                                 resolve({
@@ -188,8 +168,17 @@ export class Scanner {
     async scanFileOrPath(filePath: string): Promise<ScanResponse> {
         logger.log(`scanFileOrPath called with: ${filePath}`);
         const config = vscode.workspace.getConfiguration('llmSecurityScanner');
-        const pythonPathRaw = config.get<string>('pythonPath', 'python3');
-        const pythonPath = resolvePathVariables(pythonPathRaw);
+        let pythonPathRaw = config.get<string>('pythonPath', 'python3');
+        let pythonPath = resolvePathVariables(pythonPathRaw);
+        
+        // If path points to old .llm-scan-venv, switch to system Python and update setting
+        if (pythonPath.includes('.llm-scan-venv')) {
+            logger.log('Python path was .llm-scan-venv; switching to python3');
+            await config.update('pythonPath', 'python3', vscode.ConfigurationTarget.Workspace);
+            pythonPathRaw = 'python3';
+            pythonPath = 'python3';
+        }
+        
         logger.log(`Python path (raw): ${pythonPathRaw}`);
         logger.log(`Python path (resolved): ${pythonPath}`);
         
@@ -500,28 +489,12 @@ export class Scanner {
                             const projectRoot = this.findProjectRoot(workspaceRoot);
                             const installPath = projectRoot || '/path/to/code-scan2';
                             
-                            // Detect if we're in a virtual environment
-                            const isVenv = resolvedPythonPath.includes('venv') || resolvedPythonPath.includes('.venv');
-                            const venvPath = isVenv ? path.dirname(path.dirname(resolvedPythonPath)) : null;
-                            
-                            errorMsg = `llm_scan package not found in Python environment at "${resolvedPythonPath}".\n\n`;
-                            
-                            if (isVenv && venvPath) {
-                                errorMsg += `You're using a virtual environment at: ${venvPath}\n\n`;
-                                errorMsg += `To install:\n`;
-                                errorMsg += `  1. Activate your venv: source ${path.join(venvPath, 'bin', 'activate')}\n`;
-                                errorMsg += `  2. Install: pip install -e ${installPath}\n`;
-                                errorMsg += `  3. Verify: ${resolvedPythonPath} -m llm_scan.runner --help\n`;
-                            } else {
-                                errorMsg += `To install:\n`;
-                                errorMsg += `  ${resolvedPythonPath} -m pip install -e ${installPath}\n\n`;
-                                errorMsg += `Or if using a virtual environment:\n`;
-                                errorMsg += `  1. Activate your venv: source venv/bin/activate\n`;
-                                errorMsg += `  2. Install: pip install -e ${installPath}\n`;
-                                errorMsg += `  3. Update VS Code setting: llmSecurityScanner.pythonPath = "venv/bin/python"`;
-                            }
+                            let fullMsg = `llm_scan package not found at "${resolvedPythonPath}".\n\n`;
+                            fullMsg += `To install: ${resolvedPythonPath} -m pip install -e ${installPath}\n\nOr run **LLM Security: Install Dependencies** from the Command Palette.`;
+                            logger.log(fullMsg);
+                            errorMsg = `llm_scan package not found in Python at "${resolvedPythonPath}". Run **LLM Security: Install Dependencies** from the Command Palette, or see Output for details.`;
                         } else {
-                            errorMsg = `Python module not found. Check error: ${stderr.substring(0, 200)}`;
+                            errorMsg = `Python module not found. ${stderr.substring(0, 200)}`;
                         }
                         resolve({
                             success: false,
@@ -575,5 +548,94 @@ export class Scanner {
      */
     clearCache(): void {
         this.scanCache.clear();
+    }
+
+    /**
+     * Generate FastMCP evaluation test cases (extract tools, AI generates prompts, write JSON).
+     * Requires AI provider config (aiProvider, aiModel, aiApiKey or env).
+     */
+    async generateEvalTests(workspaceRoot: string, outputPath: string): Promise<{ success: boolean; error?: string; outputPath?: string }> {
+        const config = vscode.workspace.getConfiguration('llmSecurityScanner');
+        let pythonPathRaw = config.get<string>('pythonPath', 'python3');
+        let pythonPath = resolvePathVariables(pythonPathRaw);
+        if (pythonPath.includes('.llm-scan-venv')) {
+            await config.update('pythonPath', 'python3', vscode.ConfigurationTarget.Workspace);
+            pythonPathRaw = 'python3';
+            pythonPath = 'python3';
+        }
+        const aiProvider = config.get<string>('aiProvider', 'openai');
+        const aiModel = config.get<string>('aiModel', 'gpt-4');
+        const aiApiKey = config.get<string>('aiApiKey', '');
+        const evalMaxPrompts = config.get<number>('evalTestMaxPromptsPerTool', 3);
+
+        if (!aiProvider || !aiModel) {
+            return { success: false, error: 'Eval test generation requires AI settings. Set llmSecurityScanner.aiProvider and llmSecurityScanner.aiModel (and aiApiKey or OPENAI_API_KEY / ANTHROPIC_API_KEY).' };
+        }
+
+        if (pythonPath.includes('/') || pythonPath.includes('\\')) {
+            if (!fs.existsSync(pythonPath)) {
+                return { success: false, error: `Python path does not exist: ${pythonPath}. Check llmSecurityScanner.pythonPath.` };
+            }
+        }
+
+        const envCheck = await this.verifyPythonEnvironment(pythonPath, workspaceRoot);
+        if (!envCheck.valid) {
+            return { success: false, error: envCheck.error || 'Python environment validation failed.' };
+        }
+
+        return new Promise((resolve) => {
+            const args = [
+                '-m',
+                'llm_scan.runner',
+                workspaceRoot,
+                '--generate-eval-tests',
+                '--eval-test-out',
+                outputPath,
+                '--ai-provider',
+                aiProvider,
+                '--ai-model',
+                aiModel,
+                '--eval-test-max-prompts',
+                String(evalMaxPrompts)
+            ];
+            if (aiApiKey && aiApiKey.trim()) {
+                args.push('--ai-api-key', aiApiKey.trim());
+            }
+
+            logger.log(`Generate eval tests: ${pythonPath} ${args.join(' ')}`);
+            const childProcess = spawn(pythonPath, args, {
+                cwd: workspaceRoot,
+                env: { ...process.env },
+                shell: false
+            });
+
+            const timeout = setTimeout(() => {
+                childProcess.kill();
+                resolve({ success: false, error: 'Eval test generation timed out after 90 seconds.' });
+            }, 90000);
+
+            let stderr = '';
+            childProcess.stderr.on('data', (data: Buffer) => {
+                stderr += data.toString();
+            });
+
+            childProcess.on('close', (code: number | null) => {
+                clearTimeout(timeout);
+                if (code === 0 && fs.existsSync(outputPath)) {
+                    resolve({ success: true, outputPath });
+                    return;
+                }
+                const errPreview = stderr.length > 400 ? stderr.substring(0, 400) + '...' : stderr;
+                if (stderr.includes('No module named') || stderr.includes('ModuleNotFoundError')) {
+                    resolve({ success: false, error: `Scanner or dependencies missing. ${errPreview}` });
+                    return;
+                }
+                if (stderr.includes('API') || stderr.includes('api_key') || stderr.includes('401') || stderr.includes('403')) {
+                    resolve({ success: false, error: `AI API error. Check aiApiKey or OPENAI_API_KEY / ANTHROPIC_API_KEY. ${errPreview}` });
+                    return;
+                }
+                resolve({ success: false, error: `Eval test generation failed (exit ${code}). ${errPreview || 'No output.'}` });
+            });
+        });
     }
 }

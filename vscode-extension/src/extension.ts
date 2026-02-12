@@ -17,14 +17,18 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Get Python path from configuration (with variable resolution)
     const pythonPath = getPythonPath();
-    const config = vscode.workspace.getConfiguration('llmSecurityScanner');
-    const autoInstall = config.get<boolean>('autoInstallDependencies', true);
 
-    // ALWAYS install semgrep (required dependency) - regardless of autoInstall setting
-    // The autoInstall setting only controls whether to also install trusys-llm-scan
+    // Install scanner and dependencies automatically so scanning works with no user action
     const installer = new DependencyInstaller();
     
-    // Always check and install semgrep (required)
+    // If pythonPath points to the old .llm-scan-venv, switch to system Python
+    let effectivePythonPath = pythonPath;
+    if (pythonPath.includes('.llm-scan-venv')) {
+        const config = vscode.workspace.getConfiguration('llmSecurityScanner');
+        effectivePythonPath = 'python3';
+        await config.update('pythonPath', effectivePythonPath, vscode.ConfigurationTarget.Workspace);
+    }
+    
     vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
@@ -36,48 +40,29 @@ export async function activate(context: vscode.ExtensionContext) {
                 progress.report({ increment: 0, message: 'Checking semgrep (required dependency)...' });
                 
                 const installResult = await installer.checkAndInstallDependencies(
-                    pythonPath,
+                    effectivePythonPath,
                     (message) => progress.report({ message }),
-                    autoInstall // Pass autoInstall flag to control trusys-llm-scan installation
+                    true // Always install scanner so scanning works with no user action
                 );
 
                 if (installResult.success) {
-                    // If virtual environment was created, update Python path setting
-                    if (installResult.pythonPath && installResult.venvPath) {
-                        const config = vscode.workspace.getConfiguration('llmSecurityScanner');
-                        await config.update('pythonPath', installResult.pythonPath, vscode.ConfigurationTarget.Workspace);
-                        
-                        vscode.window.showInformationMessage(
-                            `LLM Security Scanner: ${installResult.message}`,
-                            'OK'
-                        );
-                    } else if (installResult.installed.length > 0) {
+                    if (installResult.installed.length > 0) {
                         vscode.window.showInformationMessage(
                             `LLM Security Scanner: ${installResult.message}`,
                             'OK'
                         );
                     }
                 } else {
-                    // Check if semgrep failed (critical) vs trusys-llm-scan failed (non-critical)
                     if (installResult.failed.includes('semgrep')) {
                         vscode.window.showErrorMessage(
-                            `LLM Security Scanner: Failed to install semgrep (required dependency). ${installResult.message}`,
-                            'View Details'
-                        ).then(selection => {
-                            if (selection === 'View Details') {
-                                vscode.window.showWarningMessage(
-                                    `Failed to install semgrep (required). Please install manually:\n` +
-                                    `${pythonPath} -m pip install semgrep`,
-                                    'OK'
-                                );
-                            }
+                            `LLM Security Scanner: Setup failed. ${installResult.message}`,
+                            'View Logs'
+                        ).then((selection) => {
+                            if (selection === 'View Logs') logger.show();
                         });
                     } else {
-                        // Only trusys-llm-scan failed, which is optional
-                        vscode.window.showInformationMessage(
-                            `LLM Security Scanner: semgrep installed successfully. ${installResult.message}`,
-                            'OK'
-                        );
+                        // Scanner not installed yet (e.g. no workspace); will set up on first scan
+                        logger.log('Scanner will be set up automatically when you run a scan.');
                     }
                 }
             } catch (error: any) {
@@ -88,10 +73,32 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     );
 
+    // Callback for diagnostic provider: ensure scanner is installed in the configured Python environment
+    const ensureScannerReady = async (progress?: (message: string) => void): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const installer = new DependencyInstaller();
+            let pythonPath = getPythonPath();
+            
+            // If pythonPath points to the old .llm-scan-venv, switch to system Python
+            if (pythonPath.includes('.llm-scan-venv')) {
+                progress?.('Switching from extension venv to system Python...');
+                const config = vscode.workspace.getConfiguration('llmSecurityScanner');
+                pythonPath = 'python3'; // Use system Python
+                await config.update('pythonPath', pythonPath, vscode.ConfigurationTarget.Workspace);
+            }
+            
+            const result = await installer.checkAndInstallDependencies(pythonPath, progress, true);
+            return { success: result.success, error: result.message };
+        } catch (error: any) {
+            logger.error(`ensureScannerReady error: ${error.message}`);
+            return { success: false, error: error.message };
+        }
+    };
+
     // Initialize components
     diagnosticCollection = vscode.languages.createDiagnosticCollection('llm-security');
     scanner = new Scanner(context);
-    diagnosticProvider = new DiagnosticProvider(diagnosticCollection, scanner);
+    diagnosticProvider = new DiagnosticProvider(diagnosticCollection, scanner, ensureScannerReady);
 
     context.subscriptions.push(diagnosticCollection);
 
@@ -234,6 +241,79 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     );
 
+    const generateEvalTestsCommand = vscode.commands.registerCommand(
+        'llmSecurityScanner.generateEvalTests',
+        async () => {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showWarningMessage('Open a workspace folder first.');
+                return;
+            }
+            const config = vscode.workspace.getConfiguration('llmSecurityScanner');
+            const aiProvider = config.get<string>('aiProvider', 'openai')?.trim() || '';
+            const aiModel = config.get<string>('aiModel', 'gpt-4')?.trim() || '';
+            if (!aiProvider || !aiModel) {
+                vscode.window.showWarningMessage(
+                    'Generate Eval Tests requires AI settings. Set aiProvider and aiModel in LLM Security Scanner settings (and aiApiKey or OPENAI_API_KEY / ANTHROPIC_API_KEY).',
+                    'Open Settings'
+                ).then(selection => {
+                    if (selection === 'Open Settings') {
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'llmSecurityScanner');
+                    }
+                });
+                return;
+            }
+            const defaultPath = path.join(workspaceFolder.uri.fsPath, 'eval_tests.json');
+
+            const uri = await vscode.window.showSaveDialog({
+                defaultUri: vscode.Uri.file(defaultPath),
+                saveLabel: 'Save Eval Tests',
+                filters: { JSON: ['json'] }
+            });
+            if (!uri) {
+                return;
+            }
+            const outputPath = uri.fsPath;
+
+            try {
+                await vscode.window.withProgress(
+                    {
+                        location: vscode.ProgressLocation.Notification,
+                        title: 'LLM Security Scanner: Generating eval tests...',
+                        cancellable: false
+                    },
+                    async (progress) => {
+                        progress.report({ increment: 0, message: 'Extracting tools and calling AI...' });
+                        const result = await scanner.generateEvalTests(workspaceFolder.uri.fsPath, outputPath);
+                        progress.report({ increment: 100, message: 'Done' });
+                        if (result.success && result.outputPath) {
+                            vscode.window.showInformationMessage(
+                                `Eval tests saved to ${path.basename(result.outputPath)}`,
+                                'Open File'
+                            ).then(selection => {
+                                if (selection === 'Open File') {
+                                    vscode.window.showTextDocument(vscode.Uri.file(result.outputPath!));
+                                }
+                            });
+                        } else {
+                            vscode.window.showErrorMessage(
+                                result.error || 'Eval test generation failed',
+                                'View Logs'
+                            ).then(selection => {
+                                if (selection === 'View Logs') {
+                                    logger.show();
+                                }
+                            });
+                        }
+                    }
+                );
+            } catch (error: any) {
+                logger.error('generateEvalTests error', error);
+                vscode.window.showErrorMessage(`Generate eval tests failed: ${error.message}`);
+            }
+        }
+    );
+
     const installDependenciesCommand = vscode.commands.registerCommand(
         'llmSecurityScanner.installDependencies',
         async () => {
@@ -257,16 +337,7 @@ export async function activate(context: vscode.ExtensionContext) {
                         );
 
                         if (installResult.success) {
-                            // If virtual environment was created, update Python path setting
-                            if (installResult.pythonPath && installResult.venvPath) {
-                                const config = vscode.workspace.getConfiguration('llmSecurityScanner');
-                                await config.update('pythonPath', installResult.pythonPath, vscode.ConfigurationTarget.Workspace);
-                                
-                                vscode.window.showInformationMessage(
-                                    `LLM Security Scanner: ${installResult.message}`,
-                                    'OK'
-                                );
-                            } else if (installResult.installed.length > 0) {
+                            if (installResult.installed.length > 0) {
                                 vscode.window.showInformationMessage(
                                     `LLM Security Scanner: ${installResult.message}`,
                                     'OK'
@@ -294,10 +365,11 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        scanWorkspaceCommand, 
-        scanFileCommand, 
+        scanWorkspaceCommand,
+        scanFileCommand,
         scanAndUploadCommand,
-        clearResultsCommand, 
+        clearResultsCommand,
+        generateEvalTestsCommand,
         installDependenciesCommand
     );
 

@@ -1,469 +1,224 @@
-# LLM Security Scanner - VS Code Extension
+# Trusys – LLM Security Scanner (VS Code Extension)
 
-A VS Code extension that integrates the LLM Security Scanner to detect AI/LLM-specific security vulnerabilities in your code.
+VS Code extension that runs the LLM Security Scanner inside the editor: it shows AI/LLM security findings in the **Problems** panel and supports optional AI analysis and database upload.
 
-## Features
+---
 
-- 🔍 **Automatic Scanning**: Scans files automatically on save and open
-- ⚠️ **Real-time Diagnostics**: Shows vulnerabilities in the Problems panel
-- 🎯 **OWASP Top 10 Coverage**: Detects all OWASP LLM Top 10 vulnerabilities
-- 📊 **Severity Filtering**: Configure which severity levels to display
-- 🚀 **Workspace Scanning**: Scan entire workspace with a single command
-- 💡 **Remediation Guidance**: Shows remediation suggestions for each finding
-- 📤 **Database Upload** (Optional): Upload scan results to a backend database for tracking and analytics
-- 🤖 **AI Analysis** (Optional): Use AI to filter false positives and enhance remediation suggestions
-- **MCP (FastMCP) support**: Same MCP rules as the CLI—scans `@mcp.tool()`, `@mcp.async_tool()`, `@mcp.resource()`, `@mcp.prompt()` handlers for code/command/path injection, SSRF, SQL injection, and prompt injection
+## What the extension does
 
-**Note:** FastMCP evaluation test generation (`--generate-eval-tests`) is available in the CLI only; the extension runs the standard security scan. Use the terminal or CI to generate eval test JSON.
+- **Scans your code** for LLM-related vulnerabilities (prompt injection, code/command injection, insecure output handling, MCP tool misuse, etc.) using Semgrep rules.
+- **Shows results in VS Code** as diagnostics (Problems panel, inline in the editor).
+- **Can optionally** use AI to filter false positives and improve remediation text, and upload results to your backend.
 
-### From Source
+**Requirements:** VS Code 1.74.0+, Python 3.11+. **No manual setup:** the extension installs the scanner and dependencies automatically when you open a folder or run a scan. You don’t need to run any commands or configure anything.
 
-1. Clone the repository
-2. Navigate to the `vscode-extension` directory
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Compile the extension:
-   ```bash
-   npm run compile
-   ```
-5. Press `F5` in VS Code to open a new window with the extension loaded
+---
 
-### Package Extension
+## Supported frameworks
 
-To create a `.vsix` package for distribution:
+The extension uses the same Semgrep rules as the CLI. Supported **languages** and **LLM/framework rule sets** include:
+
+| Area | Supported |
+|------|-----------|
+| **Languages** | Python (primary), JavaScript, TypeScript (activation and include patterns; rules are largely Python-focused). |
+| **LLM / API** | OpenAI, Anthropic, Cohere, Azure OpenAI, AWS Bedrock. |
+| **Frameworks** | **LangChain**, **LlamaIndex**, **Hugging Face** (agents, tools, chains, document loaders, etc.). |
+| **MCP** | **MCP (Model Context Protocol) / FastMCP** – Python SDK decorators `@mcp.tool()`, `@mcp.async_tool()`, `@mcp.resource()`, `@mcp.prompt()` (code/command/path injection, SSRF, SQL injection, prompt injection). |
+
+**Generate Eval Tests** works only with **FastMCP** (Python) today. For full rule coverage and framework details, see the main repository [README](https://github.com/spydra-tech/truscan) and [rules README](https://github.com/spydra-tech/truscan/blob/main/llm_scan/rules/python/README.md).
+
+---
+
+## Capabilities
+
+| Capability | Description |
+|------------|-------------|
+| **Automatic scanning** | Scan on save and/or on open (configurable). |
+| **Manual scanning** | **Scan Workspace** or **Scan Current File** from the Command Palette. |
+| **Problems panel** | All findings appear as errors/warnings/info; click to jump to the line. |
+| **Severity filter** | Choose which severities are shown (e.g. critical, high, medium). |
+| **Rules and patterns** | Configure rules directory, include/exclude file patterns. |
+| **AI analysis** (optional) | Use OpenAI/Anthropic to analyze findings (fewer false positives, better remediation). Requires API key and network. |
+| **Database upload** (optional) | **Scan and Upload to Database** sends results to your backend. Requires endpoint, API key, and application ID. |
+| **MCP / FastMCP** | Same rules as the CLI for `@mcp.tool()`, `@mcp.async_tool()`, `@mcp.resource()`, `@mcp.prompt()` (e.g. code/command/path injection, SSRF, SQL injection). |
+| **Generate Eval Tests** | Create FastMCP evaluation test cases: extracts tools from Python files, uses AI to generate prompts, writes JSON. Requires AI provider settings (and API key or env). |
+
+---
+
+## How to use
+
+### 1. Install and run a scan
+
+1. Install the extension (from VSIX or marketplace).
+2. Open a folder (workspace) that contains your code.
+3. The extension sets up the scanner automatically (you may see a short “Setting up…” or “Installing…” message the first time). No commands or settings are required.
+4. **Scan:**
+   - **Automatic:** Save or open a file (if **Scan on Save** / **Scan on Open** are on in settings).
+   - **Manual:** `Ctrl+Shift+P` / `Cmd+Shift+P` → **LLM Security: Scan Workspace** or **LLM Security: Scan Current File**.
+5. Open **Problems** (`Ctrl+Shift+M` / `Cmd+Shift+M`) to see findings; click a finding to go to the code.
+
+### 2. Change what gets scanned and shown
+
+- **Severity:** In settings, set `llmSecurityScanner.severityFilter` (e.g. `["critical", "high", "medium"]`).
+- **Files:** Use `llmSecurityScanner.includePatterns` and `llmSecurityScanner.excludePatterns` (e.g. exclude `tests/`, `**/__pycache__/`).
+- **Rules:** Set `llmSecurityScanner.rulesDirectory` (default uses the rules bundled with the scanner, e.g. `llm_scan/rules/python`).
+- **Turn off auto-scan:** Set `llmSecurityScanner.scanOnSave` and/or `llmSecurityScanner.scanOnOpen` to `false`.
+
+### 3. Use AI analysis (optional)
+
+- **What it does:** Sends findings to OpenAI or Anthropic to reduce false positives and improve remediation text.
+- **How to enable:**
+  1. Settings → search “LLM Security”.
+  2. Enable **AI Analysis** and set **AI Provider** (e.g. `openai`) and **AI Model** (e.g. `gpt-4`).
+  3. Set **AI API Key** or use env var `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`.
+- **When it runs:** During any scan (workspace or current file) when AI analysis is enabled.
+- **Cost:** Uses the provider’s API; you can set **AI Max Findings** to cap how many findings are sent.
+
+### 4. Upload results to your backend (optional)
+
+- **What it does:** Sends scan results to your own API (e.g. for dashboards or history).
+- **How to use:**
+  1. Configure in settings: **Upload Endpoint**, **Application ID**, **API Key**.
+  2. Run **LLM Security: Scan and Upload to Database** from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+- **Note:** Normal **Scan Workspace** / **Scan Current File** do **not** upload; only the “Scan and Upload to Database” command does.
+
+### 5. Generate Eval Tests (optional)
+
+- **What it does:** Extracts FastMCP tools from your Python code, calls the configured AI provider to generate test prompts, and writes a JSON file (e.g. `eval_tests.json`) for use with the CLI or CI.
+- **How to use:**
+  1. Set **AI Provider** and **AI Model** in settings (e.g. `openai`, `gpt-4`). Set **AI API Key** or use `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` in the environment.
+  2. Run **LLM Security: Generate Eval Tests** from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+  3. Choose where to save the JSON (default: `eval_tests.json` in the workspace root). When it finishes, you can open the file from the notification.
+- **Note:** Requires a workspace folder and Python files with MCP tools; the same AI settings are used as for other AI features.
+
+### 6. Clear results
+
+- **LLM Security: Clear Results** removes all current findings from the Problems panel.
+
+### 7. Reinstall or fix scanner/dependencies
+
+- **LLM Security: Install Dependencies** triggers the extension’s dependency install (scanner/Semgrep) again. Use if the scanner is missing or broken.
+
+---
+
+## Commands (Command Palette: `Ctrl+Shift+P` / `Cmd+Shift+P`)
+
+| Command | What it does |
+|---------|----------------|
+| **LLM Security: Scan Workspace** | Scans the whole workspace; results only in Problems (no upload). |
+| **LLM Security: Scan Current File** | Scans the active editor file; results only in Problems. |
+| **LLM Security: Scan and Upload to Database** | Scans workspace and uploads results to your backend (needs upload settings). |
+| **LLM Security: Clear Results** | Clears all extension diagnostics from the Problems panel. |
+| **LLM Security: Install Dependencies** | Runs the extension’s installer for the scanner and Semgrep. |
+| **LLM Security: Generate Eval Tests** | Generates FastMCP eval test JSON (extracts tools, AI-generated prompts). Requires AI provider/model and API key. |
+
+---
+
+## Settings (search “LLM Security” in VS Code Settings)
+
+**Scan behavior**
+
+- `llmSecurityScanner.enabled` – Turn the extension on/off.
+- `llmSecurityScanner.scanOnSave` – Scan when a file is saved.
+- `llmSecurityScanner.scanOnOpen` – Scan when a file is opened.
+- `llmSecurityScanner.scanDelay` – Delay (ms) before running a scan after a change.
+- `llmSecurityScanner.severityFilter` – Which severities to show (e.g. `["critical","high","medium"]`).
+- `llmSecurityScanner.includePatterns` – Glob patterns for files to include (e.g. `["*.py"]`).
+- `llmSecurityScanner.excludePatterns` – Glob patterns to exclude (e.g. `["**/__pycache__/**"]`).
+
+**Scanner**
+
+- `llmSecurityScanner.pythonPath` – Python executable used to run the scanner (e.g. `python3` or `venv/bin/python`).
+- `llmSecurityScanner.rulesDirectory` – Path to rules (relative to workspace or absolute).
+- `llmSecurityScanner.autoInstallDependencies` – Whether to auto-install scanner/Semgrep on activation.
+
+**AI analysis and Eval Tests (optional)**
+
+- `llmSecurityScanner.enableAiAnalysis` – Enable/disable AI analysis for scans (when implemented).
+- `llmSecurityScanner.aiProvider` – `openai` or `anthropic`. Used by **Generate Eval Tests** and AI analysis.
+- `llmSecurityScanner.aiModel` – e.g. `gpt-4`, `gpt-3.5-turbo`, `claude-3-opus-20240229`. Used by **Generate Eval Tests** and AI analysis.
+- `llmSecurityScanner.aiApiKey` – API key (or use `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`). Used by **Generate Eval Tests** and AI analysis.
+- `llmSecurityScanner.evalTestMaxPromptsPerTool` – Max prompts per tool when generating eval tests (default: 3).
+- `llmSecurityScanner.aiConfidenceThreshold` – Minimum confidence for AI verdict (0–1).
+- `llmSecurityScanner.aiMaxFindings` – Max number of findings to send to AI (limits cost).
+
+**Database upload (optional)**
+
+- `llmSecurityScanner.uploadEndpoint` – Backend URL (e.g. `https://api.example.com/api/v1/scans`).
+- `llmSecurityScanner.applicationId` – Application ID in your backend.
+- `llmSecurityScanner.apiKey` – API key for the upload endpoint.
+
+---
+
+## Viewing results in VS Code
+
+- **Problems panel:** View → Problems, or `Ctrl+Shift+M` / `Cmd+Shift+M`. Each finding shows rule, message, file, and line.
+- **In editor:** Red/yellow/blue squiggles and gutter markers (by severity). Click to go to the line.
+- **Remediation:** Shown in the problem message or in the hover where supported.
+
+---
+
+## Troubleshooting (extension-only)
+
+**Extension doesn’t run or “scanner not found”**
+
+- Ensure Python 3.11+ is installed and that `llmSecurityScanner.pythonPath` points to it.
+- Run **LLM Security: Install Dependencies** or install manually: `pip install trusys-llm-scan` (and ensure Semgrep is available).
+- Check **Output** → “LLM Security Scanner” for errors.
+
+**"llm_scan package not found" or setup fails**
+
+- The extension normally sets up the scanner automatically when you run a scan. If you see this error, ensure a **folder is open** (File → Open Folder) and run **Scan Workspace** or **Scan Current File** again; setup will run and the scan will retry.
+- If it still fails, run **LLM Security: Install Dependencies** from the Command Palette. You can also set `llmSecurityScanner.pythonPath` to a Python that already has the scanner (e.g. a venv with `pip install trusys-llm-scan`).
+
+**No findings**
+
+- Confirm `severityFilter` includes the severities you expect.
+- Check `includePatterns` / `excludePatterns` (e.g. file might be excluded).
+- Run **Scan Workspace** or **Scan Current File** manually and watch Output for scanner output.
+
+**AI analysis not running**
+
+- Ensure `enableAiAnalysis` is `true` and `aiProvider` / `aiModel` are set.
+- Set `aiApiKey` or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`. Check Output for API errors.
+
+**Generate Eval Tests fails**
+
+- Set `aiProvider` and `aiModel` in settings; set `aiApiKey` or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` in the environment.
+- Ensure the workspace has Python files that define MCP tools (e.g. `@mcp.tool()`). Check **Output** → “LLM Security Scanner” for API or timeout errors.
+
+**Database upload fails**
+
+- Confirm `uploadEndpoint`, `applicationId`, and `apiKey` are set and that the backend is reachable.
+- Use **Scan and Upload to Database** (upload is not done by the normal scan commands).
+
+**Performance**
+
+- Increase `scanDelay`, or disable `scanOnSave` / `scanOnOpen` and scan only via commands.
+- Narrow `includePatterns` or add `excludePatterns`; set `aiMaxFindings` if using AI.
+
+---
+
+## Installing the extension
+
+**From VSIX (e.g. local build)**
 
 ```bash
-npm install -g vsce
+cd vscode-extension
+npm install
+npm run compile
 vsce package
 ```
 
-Then install the `.vsix` file in VS Code:
-- Open VS Code
-- Go to Extensions view
-- Click "..." menu → "Install from VSIX..."
-- Select the generated `.vsix` file
+Then in VS Code: Extensions → … → Install from VSIX → choose the `.vsix` file.
 
-## Requirements
+**Development (F5)**
 
-- VS Code 1.74.0 or higher
-- Python 3.11+ 
-- **No manual installation needed!** The extension automatically installs all required dependencies:
-  - **semgrep**: Always installed automatically (required dependency)
-  - **trusys-llm-scan**: Installed automatically if available in workspace, or from PyPI
+Open the `vscode-extension` folder in VS Code, press F5 to launch Extension Development Host. Use `llmSecurityScanner.pythonPath` in the host so it uses a Python with the scanner installed.
 
-### Automatic Dependency Installation
+---
 
-**semgrep is automatically installed** when you install the extension - you don't need to install it manually!
+## More information
 
-The extension automatically:
-- **Installs semgrep** (required dependency) - always installed automatically
-- **Installs trusys-llm-scan** (if available in workspace or from PyPI)
-- **Creates a virtual environment** if your Python environment is externally-managed (e.g., system Python on Linux)
-
-This happens automatically in the background with a progress notification. You can disable this by setting `llmSecurityScanner.autoInstallDependencies` to `false` in settings.
-
-### Manual Installation (If Needed)
-
-If automatic installation fails or you prefer to install manually:
-
-**Option 1: Install from source (Development)**
-```bash
-cd /path/to/code-scan2
-pip install -e .
-```
-
-**Option 2: Install as package (if published)**
-```bash
-pip install trusys-llm-scan
-```
-
-**Option 3: Using a Virtual Environment (Recommended)**
-
-If you're using a virtual environment, make sure to:
-1. Install the package in your venv:
-   ```bash
-   source venv/bin/activate  # or venv\Scripts\activate on Windows
-   pip install -e /path/to/code-scan2
-   ```
-
-2. Configure VS Code to use the venv Python:
-   - Open VS Code Settings (Ctrl+, / Cmd+,)
-   - Search for `llmSecurityScanner.pythonPath`
-   - Set it to your venv Python path (e.g., `venv/bin/python` or `venv\Scripts\python.exe`)
-
-**Verify installation:**
-```bash
-# Test with the Python interpreter VS Code will use
-python3 -m llm_scan.runner --help
-# Or if using venv:
-venv/bin/python -m llm_scan.runner --help
-```
-
-If this command works, the extension will be able to use the scanner.
-
-**⚠️ Important for Extension Development Host:**
-When you press F5 to test the extension, the Extension Development Host uses the Python interpreter specified in `llmSecurityScanner.pythonPath`. Make sure that Python environment has `llm_scan` installed!
-
-## Configuration
-
-The extension can be configured via VS Code settings. Open Settings with `Ctrl+,` (or `Cmd+,` on Mac) and search for "LLM Security".
-
-### Basic Settings
-
-```json
-{
-  "llmSecurityScanner.enabled": true,
-  "llmSecurityScanner.rulesDirectory": "llm_scan/rules/python",
-  "llmSecurityScanner.pythonPath": "python3",
-  "llmSecurityScanner.severityFilter": ["critical", "high", "medium"],
-  "llmSecurityScanner.includePatterns": ["*.py"],
-  "llmSecurityScanner.excludePatterns": ["**/__pycache__/**", "**/node_modules/**"],
-  "llmSecurityScanner.scanOnSave": true,
-  "llmSecurityScanner.scanOnOpen": true,
-  "llmSecurityScanner.scanDelay": 500,
-  "llmSecurityScanner.autoInstallDependencies": true
-}
-```
-
-**Basic Settings:**
-- **`llmSecurityScanner.enabled`**: Enable/disable the extension
-- **`llmSecurityScanner.rulesDirectory`**: Path to rules directory (relative to workspace root)
-- **`llmSecurityScanner.pythonPath`**: Path to Python interpreter
-- **`llmSecurityScanner.severityFilter`**: Array of severity levels to show
-- **`llmSecurityScanner.includePatterns`**: File patterns to include
-- **`llmSecurityScanner.excludePatterns`**: File patterns to exclude
-- **`llmSecurityScanner.scanOnSave`**: Automatically scan files on save
-- **`llmSecurityScanner.scanOnOpen`**: Automatically scan files when opened
-- **`llmSecurityScanner.scanDelay`**: Delay in milliseconds before scanning after changes
-- **`llmSecurityScanner.autoInstallDependencies`**: Automatically install Python dependencies on extension activation (default: true)
-
-### Database Upload Settings (Optional)
-
-**What is Database Upload?**
-
-By default, scan results are only displayed in VS Code's Problems panel. Database upload allows you to:
-- **Store scan results** in a centralized database for tracking over time
-- **View results in a web dashboard** (if you have the backend server running)
-- **Track trends** and see how vulnerabilities change across scans
-- **Share results** with your team through a common dashboard
-- **Generate reports** and analytics from historical scan data
-
-**Important:** Database upload is **disabled by default**. Regular scans (`Scan Workspace`, `Scan Current File`) do **NOT** upload to the database automatically. You must use the separate **"Scan and Upload to Database"** command to upload results.
-
-**How to Configure Database Upload:**
-
-1. **Set up your backend server** (see `backend/README.md` for setup instructions)
-2. **Get your API credentials:**
-   - **API Key**: Generated from your backend server (see backend documentation)
-   - **Application ID**: Created in your backend database (see backend documentation)
-   - **Upload Endpoint**: Your backend server URL + `/api/v1/scans`
-     - Example: `http://localhost:3000/api/v1/scans`
-     - Example: `https://api.example.com/api/v1/scans`
-
-3. **Configure VS Code settings:**
-
-```json
-{
-  "llmSecurityScanner.apiKey": "your-api-key-here",
-  "llmSecurityScanner.applicationId": "your-application-id-here",
-  "llmSecurityScanner.uploadEndpoint": "http://localhost:3000/api/v1/scans"
-}
-```
-
-**How to Use Database Upload:**
-
-1. **Configure the settings** above
-2. **Run the command:**
-   - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
-   - Type "Scan and Upload to Database"
-   - Select the command
-3. **The extension will:**
-   - Validate your settings
-   - Scan your workspace
-   - Upload results to the database
-   - Show success or error messages
-
-**Database Upload Settings:**
-- **`llmSecurityScanner.apiKey`**: API key for authenticating with your backend server
-- **`llmSecurityScanner.applicationId`**: Application ID to associate scan results with
-- **`llmSecurityScanner.uploadEndpoint`**: Full URL to your backend's scan upload endpoint
-
-**Error Handling:**
-
-The extension handles upload errors gracefully:
-- **Missing settings**: Clear message about what's missing
-- **Connection errors**: Helpful messages about server connectivity
-- **Authentication errors**: Guidance on checking your API key
-- **Timeout errors**: Information about server response times
-
-All errors are logged and displayed without crashing the extension.
-
-### AI Analysis Settings (Optional)
-
-**What is AI Analysis?**
-
-AI Analysis uses large language models (OpenAI GPT-4 or Anthropic Claude) to:
-- **Filter false positives**: AI analyzes findings to determine if they're real vulnerabilities
-- **Provide enhanced remediation**: AI-generated, context-aware fix suggestions
-- **Improve accuracy**: Reduce noise by focusing on genuine security issues
-- **Add confidence scores**: Each finding gets an AI confidence rating
-
-**Important:** AI Analysis requires:
-- An API key from OpenAI or Anthropic
-- Additional API costs (charged by the AI provider)
-- Internet connection for API calls
-
-**How to Configure AI Analysis:**
-
-1. **Get an AI API key:**
-   - **OpenAI**: Sign up at https://platform.openai.com and get an API key
-   - **Anthropic**: Sign up at https://console.anthropic.com and get an API key
-
-2. **Configure VS Code settings:**
-
-```json
-{
-  "llmSecurityScanner.enableAiAnalysis": true,
-  "llmSecurityScanner.aiProvider": "openai",
-  "llmSecurityScanner.aiModel": "gpt-4",
-  "llmSecurityScanner.aiApiKey": "sk-your-openai-api-key",
-  "llmSecurityScanner.aiConfidenceThreshold": 0.7,
-  "llmSecurityScanner.aiMaxFindings": 50
-}
-```
-
-**Alternative: Use Environment Variables**
-
-Instead of storing API keys in settings, you can use environment variables:
-- For OpenAI: Set `OPENAI_API_KEY` environment variable
-- For Anthropic: Set `ANTHROPIC_API_KEY` environment variable
-
-Then you can omit `aiApiKey` from settings:
-
-```json
-{
-  "llmSecurityScanner.enableAiAnalysis": true,
-  "llmSecurityScanner.aiProvider": "openai",
-  "llmSecurityScanner.aiModel": "gpt-4"
-  // API key will be read from OPENAI_API_KEY env var
-}
-```
-
-**AI Analysis Settings:**
-- **`llmSecurityScanner.enableAiAnalysis`**: Enable/disable AI analysis (default: `false`)
-- **`llmSecurityScanner.aiProvider`**: AI provider to use - `"openai"` or `"anthropic"` (default: `"openai"`)
-- **`llmSecurityScanner.aiModel`**: Model to use (default: `"gpt-4"`)
-  - OpenAI: `"gpt-4"`, `"gpt-4-turbo"`, `"gpt-3.5-turbo"`
-  - Anthropic: `"claude-3-opus"`, `"claude-3-sonnet"`, `"claude-3-haiku"`
-- **`llmSecurityScanner.aiApiKey`**: Your AI provider API key (optional if using env vars)
-- **`llmSecurityScanner.aiConfidenceThreshold`**: Minimum confidence (0.0-1.0) to filter findings (default: `0.7`)
-- **`llmSecurityScanner.aiMaxFindings`**: Maximum findings to analyze (default: `null` = unlimited)
-
-**When AI Analysis Runs:**
-
-AI analysis runs automatically during scans when enabled. Findings are analyzed and:
-- False positives are marked (but still shown)
-- Enhanced remediation suggestions are added
-- Confidence scores are included in the results
-
-**Cost Considerations:**
-
-- AI analysis makes API calls to OpenAI/Anthropic
-- Costs depend on:
-  - Number of findings analyzed
-  - Model used (GPT-4 is more expensive than GPT-3.5)
-  - Provider pricing
-- Use `aiMaxFindings` to limit analysis and control costs
-- Findings are prioritized by severity (critical/high first)
-
-## Commands
-
-The extension provides the following commands (accessible via Command Palette `Ctrl+Shift+P` / `Cmd+Shift+P`):
-
-- **LLM Security: Scan Workspace** - Scan entire workspace for vulnerabilities (results shown in Problems panel only)
-- **LLM Security: Scan Current File** - Scan only the currently active file (results shown in Problems panel only)
-- **LLM Security: Scan and Upload to Database** - Scan workspace and upload results to database (requires database settings configured)
-- **LLM Security: Clear Results** - Clear all diagnostic results from Problems panel
-- **LLM Security: Install Dependencies** - Manually trigger dependency installation
-
-### Understanding Scan vs Upload
-
-**Regular Scans** (`Scan Workspace`, `Scan Current File`):
-- ✅ Display results in VS Code Problems panel
-- ✅ Show diagnostics inline in your code
-- ✅ No database interaction
-- ✅ No internet required (except for AI analysis if enabled)
-- ✅ Fast and lightweight
-
-**Scan and Upload to Database**:
-- ✅ Everything regular scans do, PLUS:
-- ✅ Uploads results to your backend database
-- ✅ Stores results for historical tracking
-- ✅ Enables web dashboard viewing
-- ⚠️ Requires database settings configured
-- ⚠️ Requires backend server running
-- ⚠️ Requires internet connection
-
-## Usage
-
-### Automatic Scanning
-
-By default, the extension automatically scans files when:
-- A file is saved
-- A file is opened
-
-You can disable this behavior in settings (`scanOnSave`, `scanOnOpen`).
-
-**Note:** Automatic scans do **NOT** upload to database. They only show results in the Problems panel.
-
-### Manual Scanning
-
-**Regular Scans (No Database Upload):**
-
-1. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-2. Type "LLM Security"
-3. Select:
-   - **"Scan Workspace"** - Scan entire workspace
-   - **"Scan Current File"** - Scan only the active file
-
-Results appear in the Problems panel only.
-
-**Scan and Upload to Database:**
-
-1. **First, configure database settings** (see Database Upload Settings above)
-2. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-3. Type "Scan and Upload to Database"
-4. Select the command
-
-The extension will:
-- Validate your database settings
-- Scan your workspace
-- Upload results to the database
-- Show success/error notifications
-
-### Viewing Results
-
-**In VS Code:**
-Scan results appear in the **Problems** panel (`Ctrl+Shift+M` / `Cmd+Shift+M`):
-- Critical/Error findings show as red errors
-- High/Medium findings show as yellow warnings
-- Low/Info findings show as blue information
-
-Click on a finding to jump to the code location.
-
-**In Web Dashboard (if database upload enabled):**
-1. Ensure your backend server is running
-2. Open the dashboard URL (typically `http://localhost:3000/ui`)
-3. Enter your API key
-4. View all uploaded scan results, trends, and analytics
-
-## Detected Vulnerabilities
-
-The extension detects vulnerabilities from the OWASP LLM Top 10:
-
-1. **LLM01: Prompt Injection** - Unsanitized user input in prompts
-2. **LLM02: Insecure Output Handling** - LLM output used unsafely
-3. **LLM03: Training Data Poisoning** - Training data from untrusted sources
-4. **LLM04: Model Denial of Service** - Resource exhaustion attacks
-5. **LLM05: Supply Chain Vulnerabilities** - Untrusted models/plugins
-6. **LLM06: Sensitive Information Disclosure** - Secrets/PII in prompts
-7. **LLM07: Insecure Plugin Design** - Plugin execution without authorization
-8. **LLM08: Excessive Agency** - Overprivileged LLM actions
-9. **LLM09: Overreliance** - Blind trust in LLM output
-10. **LLM10: Model Theft** - Unauthorized model access
-
-Plus additional code injection and command injection patterns. MCP/FastMCP servers are covered by the same OWASP categories (e.g. LLM02, LLM07 for tool parameter misuse).
-
-## Troubleshooting
-
-### Extension Not Working
-
-1. Check that Python is installed and accessible
-2. Verify that `llm_scan` package is installed:
-   ```bash
-   python3 -m llm_scan.runner --help
-   ```
-3. Check the Output panel for error messages (View → Output → "LLM Security Scanner")
-
-### No Results Showing
-
-1. Verify that files match the `includePatterns` setting
-2. Check that files are not excluded by `excludePatterns`
-3. Ensure severity filter includes the severity of findings
-4. Try running "Scan Workspace" command manually
-
-### Database Upload Issues
-
-**"Database upload requires apiKey, applicationId, and uploadEndpoint"**
-- Configure all three settings in VS Code settings
-- See "Database Upload Settings" section above
-
-**"Connection refused" or "Server not found"**
-- Verify your backend server is running
-- Check the `uploadEndpoint` URL is correct
-- Test the endpoint in a browser: `http://your-server:port/health`
-
-**"Authentication failed"**
-- Verify your API key is correct
-- Check the API key hasn't expired
-- Ensure the API key is associated with the correct application ID
-
-**"Upload timed out"**
-- Check your internet connection
-- Verify the server is accessible
-- Check server logs for errors
-
-**"Upload endpoint not found (404)"**
-- Verify the endpoint URL includes `/api/v1/scans`
-- Check your backend server routes are configured correctly
-
-### AI Analysis Issues
-
-**AI analysis not running:**
-- Verify `enableAiAnalysis` is set to `true`
-- Check API key is configured (in settings or environment variable)
-- Ensure you have internet connection
-- Check Output panel for AI-related errors
-
-**"AI provider initialization failed":**
-- Verify API key is valid
-- Check you have credits/quota with the AI provider
-- Try a different model (e.g., `gpt-3.5-turbo` instead of `gpt-4`)
-
-### Performance Issues
-
-- Increase `scanDelay` to reduce scanning frequency
-- Disable `scanOnSave` or `scanOnOpen` if scanning is too frequent
-- Use `excludePatterns` to skip large directories
-- Set `aiMaxFindings` to limit AI analysis costs
-
-## Development
-
-### Building
-
-```bash
-npm install
-npm run compile
-```
-
-### Watching for Changes
-
-```bash
-npm run watch
-```
-
-### Testing
-
-```bash
-npm test
-```
-
-## License
-
-Same as the main LLM Security Scanner project.
-
-## Contributing
-
-Contributions welcome! Please see the main project README for contribution guidelines.
+- Scanner and rules: see the main repository [README](https://github.com/spydra-tech/truscan) and [TEST_GENERATION.md](https://github.com/spydra-tech/truscan/blob/main/TEST_GENERATION.md) for CLI and eval tests.
+- Backend/dashboard: see the main repo’s `backend/` documentation for server setup.
