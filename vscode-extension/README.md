@@ -41,7 +41,7 @@ The extension uses the same Semgrep rules as the CLI. Supported **languages** an
 | **AI analysis** (optional) | Use OpenAI/Anthropic to analyze findings (fewer false positives, better remediation). Requires API key and network. |
 | **Database upload** (optional) | **Scan and Upload to Database** sends results to your backend. Requires endpoint, API key, and application ID. |
 | **MCP / FastMCP** | Same rules as the CLI for `@mcp.tool()`, `@mcp.async_tool()`, `@mcp.resource()`, `@mcp.prompt()` (e.g. code/command/path injection, SSRF, SQL injection). |
-| **Generate Eval Tests** | Create evaluation test cases for **FastMCP**, **LangChain**, **LlamaIndex**, or **LangGraph**: extracts tools from Python files, uses AI to generate prompts, writes JSON. Choose framework in settings or when running the command. Requires AI provider settings (and API key or env). |
+| **Generate Eval Tests** | Create evaluation test cases for **FastMCP**, **LangChain**, **LlamaIndex**, or **LangGraph**: extracts tools from Python files, uses AI to generate a mix of prompts (including **eval_type**: tool_selection, safety, prompt_injection, argument_correctness, robustness), writes JSON. For LangGraph, output includes graph_structure for valid-path evals. Run concrete evals via CLI: `python -m llm_scan.eval`. Requires AI provider settings (and API key or env). |
 
 ---
 
@@ -84,13 +84,13 @@ The extension uses the same Semgrep rules as the CLI. Supported **languages** an
 
 ### 5. Generate Eval Tests (optional)
 
-- **What it does:** Extracts tools from your Python code (FastMCP, LangChain, or LlamaIndex), calls the configured AI provider to generate test prompts, and writes a JSON file (e.g. `eval_tests.json`) for use with the CLI or CI.
+- **What it does:** Extracts tools from your Python code (FastMCP, LangChain, LlamaIndex, or LangGraph), calls the configured AI provider to generate test prompts with a **mix of eval types** (tool_selection, safety, prompt_injection, argument_correctness, robustness), and writes a JSON file (e.g. `eval_tests.json`). For LangGraph, the JSON includes **graph_structure** so you can run **valid-path** evals. Use the CLI to run concrete evals: `python -m llm_scan.eval --eval-json <path> --graph <module:attr>`.
 - **How to use:**
   1. Set **AI Provider** and **AI Model** in settings (e.g. `openai`, `gpt-4`). Set **AI API Key** or use `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` in the environment.
   2. Set **Eval Framework** to `mcp` (FastMCP `@mcp.tool`), `langchain` (LangChain `@tool`), `llamaindex` (LlamaIndex `FunctionTool.from_defaults`), or `langgraph` (LangGraph `StateGraph` with `ToolNode`) in settings, or choose the framework when you run the command (quick pick).
   3. Run **LLM Security: Generate Eval Tests** from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`). You can pick **FastMCP**, **LangChain**, **LlamaIndex**, or **LangGraph** for that run (or use the current setting).
   4. Choose where to save the JSON (default: `eval_tests.json` in the workspace root). When it finishes, you can open the file from the notification.
-- **Note:** Requires a workspace folder and Python files with MCP, LangChain, LlamaIndex, or LangGraph tools; the same AI settings are used as for other AI features.
+- **Note:** Requires a workspace folder and Python files with the chosen framework’s tools. To run evals (tool-selection accuracy, valid path rate, tool coverage), use the scanner CLI: see [TEST_GENERATION.md](https://github.com/spydra-tech/truscan/blob/main/TEST_GENERATION.md#running-concrete-evals-eval-runner).
 
 ### 6. Clear results
 
@@ -111,7 +111,7 @@ The extension uses the same Semgrep rules as the CLI. Supported **languages** an
 | **LLM Security: Scan and Upload to Database** | Scans workspace and uploads results to your backend (needs upload settings). |
 | **LLM Security: Clear Results** | Clears all extension diagnostics from the Problems panel. |
 | **LLM Security: Install Dependencies** | Runs the extension’s installer for the scanner and Semgrep. |
-| **LLM Security: Generate Eval Tests** | Generates FastMCP eval test JSON (extracts tools, AI-generated prompts). Requires AI provider/model and API key. |
+| **LLM Security: Generate Eval Tests** | Generates eval test JSON for FastMCP, LangChain, LlamaIndex, or LangGraph (extracts tools, AI-generated prompts with eval_type mix; LangGraph includes graph_structure). Requires AI provider/model and API key. |
 
 ---
 
