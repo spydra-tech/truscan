@@ -265,6 +265,21 @@ export async function activate(context: vscode.ExtensionContext) {
             }
             const defaultPath = path.join(workspaceFolder.uri.fsPath, 'eval_tests.json');
 
+            const frameworkChoice = await vscode.window.showQuickPick(
+                [
+                    { label: '$(settings-gear) Use setting', description: `Current: ${config.get<string>('evalFramework', 'mcp')}`, value: '' },
+                    { label: 'FastMCP', description: '@mcp.tool() / @mcp.async_tool()', value: 'mcp' },
+                    { label: 'LangChain', description: '@tool from langchain_core.tools', value: 'langchain' },
+                    { label: 'LlamaIndex', description: 'FunctionTool.from_defaults(fn)', value: 'llamaindex' },
+                    { label: 'LangGraph', description: 'StateGraph with ToolNode or @tool', value: 'langgraph' }
+                ],
+                { title: 'Eval test framework (or use setting)', placeHolder: 'Choose framework for this run' }
+            );
+            if (frameworkChoice === undefined) {
+                return;
+            }
+            const frameworkOverride = (frameworkChoice.value === '' ? undefined : frameworkChoice.value) as 'mcp' | 'langchain' | 'llamaindex' | undefined;
+
             const uri = await vscode.window.showSaveDialog({
                 defaultUri: vscode.Uri.file(defaultPath),
                 saveLabel: 'Save Eval Tests',
@@ -284,7 +299,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     },
                     async (progress) => {
                         progress.report({ increment: 0, message: 'Extracting tools and calling AI...' });
-                        const result = await scanner.generateEvalTests(workspaceFolder.uri.fsPath, outputPath);
+                        const result = await scanner.generateEvalTests(workspaceFolder.uri.fsPath, outputPath, frameworkOverride);
                         progress.report({ increment: 100, message: 'Done' });
                         if (result.success && result.outputPath) {
                             vscode.window.showInformationMessage(

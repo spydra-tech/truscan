@@ -47,6 +47,7 @@ setup(
     entry_points={
         "console_scripts": [
             "trusys-llm-scan=llm_scan.runner:main",
+            "llm-scan-eval=llm_scan.eval.runner:main",
         ],
     },
     include_package_data=True,

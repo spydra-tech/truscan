@@ -105,7 +105,63 @@ python -m llm_scan.runner samples/mcp \
 python -m llm_scan.runner . --generate-eval-tests --eval-test-out eval.json --eval-test-max-prompts 5
 ```
 
-Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` (or use `--ai-api-key`). If no MCP tools are found, the manifest and test_cases arrays are empty.
+Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` (or use `--ai-api-key`). If no tools are found, the manifest and test_cases arrays are empty.
+
+### LangChain evaluation test generation
+
+For **LangChain** agents using the `@tool` decorator (from `langchain.tools` or `langchain_core.tools`), use `--eval-framework langchain`:
+
+1. **Extract** (no AI): Parse Python files with AST; find `@tool` and `@tool("name")`; extract tool name (from decorator or function), docstring, parameters.
+2. **Generate** (AI): Same as FastMCP—send the tool manifest to the LLM; receive user prompts and ground truth.
+3. **Output**: Same JSON format as FastMCP.
+
+```bash
+# Generate eval tests for LangChain @tool code
+python -m llm_scan.runner samples/langchain \
+  --generate-eval-tests \
+  --eval-framework langchain \
+  --eval-test-out eval_tests_langchain.json \
+  --ai-provider openai \
+  --ai-model gpt-4
+```
+
+Supported: `@tool`, `@tool("custom_name")`, and async functions decorated with `@tool`. The default framework is `mcp`; use `--eval-framework langchain` for LangChain projects.
+
+### LlamaIndex evaluation test generation
+
+For **LlamaIndex** agents using `FunctionTool.from_defaults()` to wrap functions, use `--eval-framework llamaindex`:
+
+1. **Extract** (no AI): Parse Python files with AST; find `FunctionTool.from_defaults(function_ref)` calls; extract the referenced function definitions (name, docstring, parameters).
+2. **Generate** (AI): Same as FastMCP/LangChain—send the tool manifest to the LLM; receive user prompts and ground truth.
+3. **Output**: Same JSON format as FastMCP/LangChain.
+
+```bash
+# Generate eval tests for LlamaIndex FunctionTool code
+python -m llm_scan.runner samples/llama-index \
+  --generate-eval-tests \
+  --eval-framework llamaindex \
+  --eval-test-out eval_tests_llamaindex.json \
+  --ai-provider openai \
+  --ai-model gpt-4
+```
+
+Supported: Functions wrapped with `FunctionTool.from_defaults(function)` or `FunctionTool.from_defaults(fn=function)`. The extractor finds the function reference and extracts its definition.
+
+
+### LangGraph evaluation test generation
+
+For **LangGraph** agents using `StateGraph` with `ToolNode` or `@tool` decorated functions, use `--eval-framework langgraph`:
+
+1. **Extract** (no AI): Parse Python files with AST; find `@tool` decorated functions and tools referenced in `ToolNode([tool1, tool2, ...])` calls; extract function definitions (name, docstring, parameters).
+2. **Generate** (AI): Same as FastMCP/LangChain/LlamaIndex—send the tool manifest to the LLM; receive user prompts and ground truth.
+3. **Output**: Same JSON format as other frameworks.
+
+```bash
+# Generate eval tests for LangGraph StateGraph code
+python -m llm_scan.runner samples/langgraph   --generate-eval-tests   --eval-framework langgraph   --eval-test-out eval_tests_langgraph.json   --ai-provider openai   --ai-model gpt-4
+```
+
+Supported: Functions decorated with `@tool` (from `langchain_core.tools`) and tools referenced in `ToolNode([tool1, tool2, ...])` calls. The extractor finds tools used in the graph structure and extracts their definitions.
 
 ### Output format
 
@@ -115,11 +171,50 @@ Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` (or use `--ai-api-key`). If no MCP t
     { "name": "run_calculation", "description": "Evaluate a math expression.", "parameters": [{ "name": "expression", "type": "str" }], "decorator": "tool" }
   ],
   "test_cases": [
-    { "prompt": "What is 2 + 3?", "expected_tool": "run_calculation", "ground_truth": "Agent should call run_calculation with expression='2 + 3'." }
+    { "prompt": "What is 2 + 3?", "expected_tool": "run_calculation", "ground_truth": "Agent should call run_calculation with expression='2 + 3'.", "eval_type": "tool_selection" }
   ],
   "meta": { "generation_duration_seconds": 1.2, "ai_model_used": "gpt-4" }
 }
 ```
+
+Each test case may include **`eval_type`**: one of `tool_selection` (default), `safety`, `prompt_injection`, `argument_correctness`, or `robustness`. The AI generator sets this so the eval runner (or custom pipelines) can treat cases differently (e.g. for `safety`, pass = agent refused).
+
+### Running concrete evals (eval runner)
+
+After generating an eval JSON, you can **run concrete evals** against a compiled graph (e.g. LangGraph) to measure:
+
+- **Tool selection accuracy**: % of test cases where the agent called the `expected_tool`.
+- **Tool invocation presence**: Same as above (the expected tool was invoked).
+- **Valid path rate**: (LangGraph only, when `graph_structure` is in the JSON) % of runs where the sequence of nodes respected the graph edges (no illegal transitions).
+- **Tool coverage**: Per-tool recall (for each tool, % of cases that expected that tool and where the agent called it).
+
+**Requirements**: The graph’s runtime dependencies must be installed (e.g. `langgraph`, `langchain-core` for LangGraph). The graph must be loadable as a Python symbol.
+
+**CLI** (from repo root):
+
+```bash
+# Run all test cases
+python -m llm_scan.eval --eval-json eval_tests_langgraph.json \
+  --graph samples.langgraph.langgraph_multi_agent_app:graph
+
+# Limit to 5 cases (quick smoke test)
+python -m llm_scan.eval --eval-json eval_tests_langgraph.json \
+  --graph samples.langgraph.langgraph_multi_agent_app:graph --max-cases 5
+
+# Verbose (per-case results)
+python -m llm_scan.eval --eval-json eval_tests_langgraph.json \
+  --graph samples.langgraph.langgraph_multi_agent_app:graph -v
+
+# Skip path collection (faster; valid_path_rate will be omitted)
+python -m llm_scan.eval --eval-json eval_tests_langgraph.json \
+  --graph samples.langgraph.langgraph_multi_agent_app:graph --no-path
+```
+
+Alternatively: `llm-scan-eval` (if installed via pip), or `python -m llm_scan.eval.runner`.
+
+**Graph spec**: `module.path:attribute` — the graph is loaded with `importlib.import_module(module.path)` then `getattr(mod, attribute)`. Example: `samples.langgraph.langgraph_multi_agent_app:graph`.
+
+**Including graph structure in eval JSON**: When you generate eval tests with `--eval-framework langgraph`, the written JSON includes a `graph_structure` field (nodes, edges, entry_point). That is used for the valid-path check when you run the eval runner.
 
 ## Example Output
 

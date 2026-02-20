@@ -36,10 +36,11 @@ class ScanConfig:
     ai_cache_enabled: bool = True  # Cache AI responses
     ai_analyze_rules: Optional[List[str]] = None  # Specific rules to analyze (None = all)
     ai_max_findings: Optional[int] = None  # Maximum number of findings to analyze (None = unlimited)
-    # Eval test generation (FastMCP)
+    # Eval test generation (FastMCP, LangChain, etc.)
     enable_eval_test_generation: bool = False
     eval_test_output: Optional[str] = None  # Path to write eval test JSON
     eval_test_max_prompts_per_tool: int = 3
+    eval_framework: str = "mcp"  # "mcp" | "langchain" | "llamaindex" | "langgraph" - which extractor to use
 
     @classmethod
     def from_dict(cls, data: dict) -> "ScanConfig":
@@ -72,6 +73,7 @@ class ScanConfig:
             enable_eval_test_generation=data.get("enable_eval_test_generation", False),
             eval_test_output=data.get("eval_test_output"),
             eval_test_max_prompts_per_tool=data.get("eval_test_max_prompts_per_tool", 3),
+            eval_framework=data.get("eval_framework", "mcp"),
         )
 
     def get_default_rules_dir(self) -> str:

@@ -18,7 +18,8 @@ A Python-based code scanning tool that uses the Semgrep Python SDK to detect AI/
 - **Extensible Rule System**: Easy to add new rule packs and vulnerability patterns
 - **MCP (Model Context Protocol)**: Rules for Python MCP SDK / FastMCP (`@tool`, `@async_tool`, `@resource`, `@prompt`) – code/command/path injection, SSRF, SQL injection, prompt injection
 - **Test Case Generation**: Automatically generates security test cases by extracting system prompts, tool definitions (MCP, LangChain), and detecting dangerous sinks. See [TEST_GENERATION.md](TEST_GENERATION.md) for details.
-- **FastMCP evaluation test generation**: Extract tool definitions from FastMCP code (no AI), then use AI with only a compact tool manifest to generate natural-language prompts that should trigger each tool; output JSON for evaluation harnesses. See [TEST_GENERATION.md](TEST_GENERATION.md#fastmcp-evaluation-test-generation).
+- **Evaluation test generation (multi-framework)**: Extract tool definitions from **FastMCP**, **LangChain**, **LlamaIndex**, or **LangGraph** code, then use AI to generate natural-language test prompts. Output JSON includes **eval_type** per case (`tool_selection`, `safety`, `prompt_injection`, `argument_correctness`, `robustness`) and, for LangGraph, **graph_structure** (nodes, edges, entry point) for path-aware evals. See [TEST_GENERATION.md](TEST_GENERATION.md).
+- **Concrete eval runner**: Run evals against a compiled graph/agent to measure **tool-selection accuracy**, **valid path rate** (LangGraph), and **tool coverage**. Use `python -m llm_scan.eval` or `llm-scan-eval` with an eval JSON and graph spec. See [TEST_GENERATION.md](TEST_GENERATION.md#running-concrete-evals-eval-runner).
 - **Performance Optimized**: Incremental scanning, respects .gitignore, configurable include/exclude patterns
 
 ## Installation
@@ -121,6 +122,34 @@ python -m llm_scan.runner samples/mcp \
   --eval-test-out eval_tests.json \
   --ai-provider openai \
   --ai-model gpt-4
+
+# Generate LangChain evaluation tests (extract @tool definitions, same AI flow)
+python -m llm_scan.runner samples/langchain \
+  --generate-eval-tests \
+  --eval-framework langchain \
+  --eval-test-out eval_tests.json \
+  --ai-provider openai \
+  --ai-model gpt-4
+
+# Generate LangGraph evaluation tests (extract @tool and ToolNode; includes graph_structure for valid-path evals)
+python -m llm_scan.runner samples/langgraph \
+  --generate-eval-tests \
+  --eval-framework langgraph \
+  --eval-test-out eval_tests.json \
+  --ai-provider openai \
+  --ai-model gpt-4
+
+# Generate LlamaIndex evaluation tests (extract FunctionTool.from_defaults)
+python -m llm_scan.runner samples/llama-index \
+  --generate-eval-tests \
+  --eval-framework llamaindex \
+  --eval-test-out eval_tests.json \
+  --ai-provider openai \
+  --ai-model gpt-4
+
+# Run concrete evals (tool-selection accuracy, valid path rate, tool coverage)
+python -m llm_scan.eval --eval-json eval_tests.json \
+  --graph samples.langgraph.langgraph_multi_agent_app:graph
 ```
 
 ### Python Library Usage
@@ -303,7 +332,12 @@ llm_scan/
 │   ├── ai_engine.py       # AI-based false positive filtering
 │   ├── ai_providers.py    # AI provider implementations (OpenAI, Anthropic)
 │   ├── mcp_extractor.py   # AST-based FastMCP tool extraction (for eval test generation)
-│   └── eval_prompt_generator.py  # AI-powered eval prompt generation (manifest-only payload)
+│   ├── langchain_extractor.py    # LangChain @tool extraction
+│   ├── llamaindex_extractor.py   # LlamaIndex FunctionTool.from_defaults extraction
+│   ├── langgraph_extractor.py    # LangGraph StateGraph + ToolNode extraction (tools + graph_structure)
+│   └── eval_prompt_generator.py  # AI-powered eval prompt generation (manifest + eval_type mix)
+├── eval/
+│   └── runner.py         # Concrete eval runner (tool-selection, valid path, tool coverage)
 ├── utils/
 │   └── code_context.py    # Code context extraction for AI analysis
 ├── output/
@@ -576,9 +610,10 @@ python -m llm_scan.runner --paths . --format console
 - `output_file`: Output file path (optional for console)
 - `respect_gitignore`: Whether to respect .gitignore (default: True)
 - `max_target_bytes`: Maximum file size to scan (default: 1MB)
-- `enable_eval_test_generation`: Generate FastMCP evaluation test cases (default: False)
+- `enable_eval_test_generation`: Generate evaluation test cases (default: False)
 - `eval_test_output`: Path to write eval test JSON (used with `--generate-eval-tests`)
 - `eval_test_max_prompts_per_tool`: Max prompts per tool for eval generation (default: 3)
+- `eval_framework`: Framework for tool extraction: `mcp`, `langchain`, `llamaindex`, or `langgraph` (used with `--generate-eval-tests`)
 
 ## Extensibility
 

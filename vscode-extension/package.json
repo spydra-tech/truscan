@@ -141,6 +141,18 @@
           "type": "number",
           "default": 3,
           "description": "Max prompts per tool when generating eval tests (Generate Eval Tests command)."
+        },
+        "llmSecurityScanner.evalFramework": {
+          "type": "string",
+          "default": "mcp",
+          "enum": ["mcp", "langchain", "llamaindex", "langgraph"],
+          "enumDescriptions": [
+            "FastMCP: extract tools from @mcp.tool() / @mcp.async_tool()",
+            "LangChain: extract tools from @tool (langchain_core.tools)",
+            "LlamaIndex: extract tools from FunctionTool.from_defaults(fn)",
+            "LangGraph: extract tools from StateGraph with ToolNode or @tool decorators"
+          ],
+          "description": "Framework for eval test extraction (used by Generate Eval Tests). Choose the framework that matches your Python tools: mcp (FastMCP), langchain (@tool), llamaindex (FunctionTool), or langgraph (StateGraph)."
         }
       }
     },

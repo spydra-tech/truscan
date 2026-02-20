@@ -527,6 +527,12 @@ def main() -> int:
         default=3,
         help="Max prompts per tool for eval test generation (default: 3)",
     )
+    parser.add_argument(
+        "--eval-framework",
+        choices=["mcp", "langchain", "llamaindex", "langgraph"],
+        default="mcp",
+        help="Framework for eval test extraction: mcp (FastMCP @mcp.tool), langchain (@tool), llamaindex (FunctionTool.from_defaults), or langgraph (StateGraph with ToolNode) (default: mcp)",
+    )
 
     args = parser.parse_args()
 
@@ -611,6 +617,7 @@ def main() -> int:
         enable_eval_test_generation=args.generate_eval_tests,
         eval_test_output=args.eval_test_out,
         eval_test_max_prompts_per_tool=args.eval_test_max_prompts,
+        eval_framework=args.eval_framework,
     )
 
     # Setup uploader if requested
@@ -641,28 +648,53 @@ def main() -> int:
         logger.info("")
         result = run_scan(config, uploader)
 
-        # Eval test generation (FastMCP): extract tools, generate prompts via AI, write JSON
+        # Eval test generation: extract tools (MCP or LangChain), generate prompts via AI, write JSON
         if config.enable_eval_test_generation:
             import json as _json
-            from .engine.eval_prompt_generator import run_eval_test_generation
+            import time
+            from .engine.eval_prompt_generator import generate_eval_tests
             from .models import EvalTestResult
 
             logger.info("")
-            logger.info("Eval test generation (FastMCP)...")
+            framework_labels = {
+                "langchain": "LangChain",
+                "llamaindex": "LlamaIndex",
+                "langgraph": "LangGraph",
+                "mcp": "FastMCP"
+            }
+            framework_label = framework_labels.get(config.eval_framework, "FastMCP")
+            logger.info("Eval test generation (%s)...", framework_label)
             py_files = [f for f in result.scanned_files if f.endswith(".py")]
             if not py_files:
                 logger.warning("No Python files in scan; skipping eval test generation")
             else:
-                tools, cases, duration, model = run_eval_test_generation(
-                    py_files,
+                graph_structure = None
+                if config.eval_framework == "langchain":
+                    from .engine.langchain_extractor import extract_from_files as langchain_extract
+                    tools = langchain_extract(py_files)
+                elif config.eval_framework == "llamaindex":
+                    from .engine.llamaindex_extractor import extract_from_files as llamaindex_extract
+                    tools = llamaindex_extract(py_files)
+                elif config.eval_framework == "langgraph":
+                    from .engine.langgraph_extractor import extract_from_files_with_structure
+                    tools, graph_structure = extract_from_files_with_structure(py_files)
+                else:
+                    from .engine.mcp_extractor import extract_from_files as mcp_extract
+                    tools = mcp_extract(py_files)
+                start = time.time()
+                cases = generate_eval_tests(
+                    tools,
                     config,
                     max_prompts_per_tool=config.eval_test_max_prompts_per_tool,
+                    graph_structure=graph_structure,
                 )
+                duration = time.time() - start
                 eval_result = EvalTestResult(
                     tool_manifest=tools,
                     test_cases=cases,
                     generation_duration_seconds=duration,
-                    ai_model_used=model,
+                    ai_model_used=config.ai_model,
+                    graph_structure=graph_structure,
                 )
                 if config.eval_test_output:
                     out_path = Path(config.eval_test_output)

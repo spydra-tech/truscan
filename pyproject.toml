@@ -46,6 +46,7 @@ dev = [
 
 [project.scripts]
 trusys-llm-scan = "llm_scan.runner:main"
+llm-scan-eval = "llm_scan.eval.runner:main"
 
 [tool.setuptools.packages.find]
 exclude = ["tests*"]

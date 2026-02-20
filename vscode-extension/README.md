@@ -25,7 +25,7 @@ The extension uses the same Semgrep rules as the CLI. Supported **languages** an
 | **Frameworks** | **LangChain**, **LlamaIndex**, **Hugging Face** (agents, tools, chains, document loaders, etc.). |
 | **MCP** | **MCP (Model Context Protocol) / FastMCP** – Python SDK decorators `@mcp.tool()`, `@mcp.async_tool()`, `@mcp.resource()`, `@mcp.prompt()` (code/command/path injection, SSRF, SQL injection, prompt injection). |
 
-**Generate Eval Tests** works only with **FastMCP** (Python) today. For full rule coverage and framework details, see the main repository [README](https://github.com/spydra-tech/truscan) and [rules README](https://github.com/spydra-tech/truscan/blob/main/llm_scan/rules/python/README.md).
+**Generate Eval Tests** supports **FastMCP** (`@mcp.tool`), **LangChain** (`@tool`), **LlamaIndex** (`FunctionTool.from_defaults`), and **LangGraph** (`StateGraph` with `ToolNode`); set **Eval Framework** in settings to choose. For full rule coverage and framework details, see the main repository [README](https://github.com/spydra-tech/truscan) and [rules README](https://github.com/spydra-tech/truscan/blob/main/llm_scan/rules/python/README.md).
 
 ---
 
@@ -41,7 +41,7 @@ The extension uses the same Semgrep rules as the CLI. Supported **languages** an
 | **AI analysis** (optional) | Use OpenAI/Anthropic to analyze findings (fewer false positives, better remediation). Requires API key and network. |
 | **Database upload** (optional) | **Scan and Upload to Database** sends results to your backend. Requires endpoint, API key, and application ID. |
 | **MCP / FastMCP** | Same rules as the CLI for `@mcp.tool()`, `@mcp.async_tool()`, `@mcp.resource()`, `@mcp.prompt()` (e.g. code/command/path injection, SSRF, SQL injection). |
-| **Generate Eval Tests** | Create FastMCP evaluation test cases: extracts tools from Python files, uses AI to generate prompts, writes JSON. Requires AI provider settings (and API key or env). |
+| **Generate Eval Tests** | Create evaluation test cases for **FastMCP**, **LangChain**, **LlamaIndex**, or **LangGraph**: extracts tools from Python files, uses AI to generate prompts, writes JSON. Choose framework in settings or when running the command. Requires AI provider settings (and API key or env). |
 
 ---
 
@@ -84,12 +84,13 @@ The extension uses the same Semgrep rules as the CLI. Supported **languages** an
 
 ### 5. Generate Eval Tests (optional)
 
-- **What it does:** Extracts FastMCP tools from your Python code, calls the configured AI provider to generate test prompts, and writes a JSON file (e.g. `eval_tests.json`) for use with the CLI or CI.
+- **What it does:** Extracts tools from your Python code (FastMCP, LangChain, or LlamaIndex), calls the configured AI provider to generate test prompts, and writes a JSON file (e.g. `eval_tests.json`) for use with the CLI or CI.
 - **How to use:**
   1. Set **AI Provider** and **AI Model** in settings (e.g. `openai`, `gpt-4`). Set **AI API Key** or use `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` in the environment.
-  2. Run **LLM Security: Generate Eval Tests** from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
-  3. Choose where to save the JSON (default: `eval_tests.json` in the workspace root). When it finishes, you can open the file from the notification.
-- **Note:** Requires a workspace folder and Python files with MCP tools; the same AI settings are used as for other AI features.
+  2. Set **Eval Framework** to `mcp` (FastMCP `@mcp.tool`), `langchain` (LangChain `@tool`), `llamaindex` (LlamaIndex `FunctionTool.from_defaults`), or `langgraph` (LangGraph `StateGraph` with `ToolNode`) in settings, or choose the framework when you run the command (quick pick).
+  3. Run **LLM Security: Generate Eval Tests** from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`). You can pick **FastMCP**, **LangChain**, **LlamaIndex**, or **LangGraph** for that run (or use the current setting).
+  4. Choose where to save the JSON (default: `eval_tests.json` in the workspace root). When it finishes, you can open the file from the notification.
+- **Note:** Requires a workspace folder and Python files with MCP, LangChain, LlamaIndex, or LangGraph tools; the same AI settings are used as for other AI features.
 
 ### 6. Clear results
 
@@ -139,6 +140,7 @@ The extension uses the same Semgrep rules as the CLI. Supported **languages** an
 - `llmSecurityScanner.aiModel` – e.g. `gpt-4`, `gpt-3.5-turbo`, `claude-3-opus-20240229`. Used by **Generate Eval Tests** and AI analysis.
 - `llmSecurityScanner.aiApiKey` – API key (or use `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`). Used by **Generate Eval Tests** and AI analysis.
 - `llmSecurityScanner.evalTestMaxPromptsPerTool` – Max prompts per tool when generating eval tests (default: 3).
+- `llmSecurityScanner.evalFramework` – Framework for eval extraction: `mcp` (FastMCP), `langchain` (LangChain), `llamaindex` (LlamaIndex), or `langgraph` (LangGraph) (default: mcp).
 - `llmSecurityScanner.aiConfidenceThreshold` – Minimum confidence for AI verdict (0–1).
 - `llmSecurityScanner.aiMaxFindings` – Max number of findings to send to AI (limits cost).
 

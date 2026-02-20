@@ -551,10 +551,11 @@ export class Scanner {
     }
 
     /**
-     * Generate FastMCP evaluation test cases (extract tools, AI generates prompts, write JSON).
-     * Requires AI provider config (aiProvider, aiModel, aiApiKey or env).
+     * Generate evaluation test cases (extract tools, AI generates prompts, write JSON).
+     * Supports FastMCP, LangChain, and LlamaIndex. Requires AI provider config (aiProvider, aiModel, aiApiKey or env).
+     * @param frameworkOverride If set, overrides the eval framework setting for this run (mcp | langchain | llamaindex).
      */
-    async generateEvalTests(workspaceRoot: string, outputPath: string): Promise<{ success: boolean; error?: string; outputPath?: string }> {
+    async generateEvalTests(workspaceRoot: string, outputPath: string, frameworkOverride?: 'mcp' | 'langchain' | 'llamaindex'): Promise<{ success: boolean; error?: string; outputPath?: string }> {
         const config = vscode.workspace.getConfiguration('llmSecurityScanner');
         let pythonPathRaw = config.get<string>('pythonPath', 'python3');
         let pythonPath = resolvePathVariables(pythonPathRaw);
@@ -567,6 +568,7 @@ export class Scanner {
         const aiModel = config.get<string>('aiModel', 'gpt-4');
         const aiApiKey = config.get<string>('aiApiKey', '');
         const evalMaxPrompts = config.get<number>('evalTestMaxPromptsPerTool', 3);
+        const evalFramework = frameworkOverride ?? config.get<string>('evalFramework', 'mcp');
 
         if (!aiProvider || !aiModel) {
             return { success: false, error: 'Eval test generation requires AI settings. Set llmSecurityScanner.aiProvider and llmSecurityScanner.aiModel (and aiApiKey or OPENAI_API_KEY / ANTHROPIC_API_KEY).' };
@@ -596,7 +598,9 @@ export class Scanner {
                 '--ai-model',
                 aiModel,
                 '--eval-test-max-prompts',
-                String(evalMaxPrompts)
+                String(evalMaxPrompts),
+                '--eval-framework',
+                evalFramework === 'langchain' ? 'langchain' : evalFramework === 'llamaindex' ? 'llamaindex' : evalFramework === 'langgraph' ? 'langgraph' : 'mcp'
             ];
             if (aiApiKey && aiApiKey.trim()) {
                 args.push('--ai-api-key', aiApiKey.trim());

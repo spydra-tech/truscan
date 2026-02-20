@@ -243,15 +243,20 @@ class MCPToolDefinition:
         }
 
 
+# Standard eval types for test cases (used by eval runner and docs)
+EVAL_TYPES = ("tool_selection", "safety", "prompt_injection", "argument_correctness", "robustness")
+
+
 @dataclass
 class EvalTestCase:
-    """Single evaluation test case: prompt + expected tool + ground truth."""
+    """Single evaluation test case: prompt + expected tool + ground truth + eval type."""
 
     prompt: str
     expected_tool: str
     ground_truth: str
     expected_args: Optional[Dict[str, Any]] = None
     category: Optional[str] = None  # e.g. "tool-invocation", "security"
+    eval_type: Optional[str] = None  # one of EVAL_TYPES: tool_selection, safety, prompt_injection, etc.
 
     def to_dict(self) -> Dict[str, Any]:
         d = {
@@ -263,6 +268,8 @@ class EvalTestCase:
             d["expected_args"] = self.expected_args
         if self.category is not None:
             d["category"] = self.category
+        if self.eval_type is not None:
+            d["eval_type"] = self.eval_type
         return d
 
 
@@ -274,9 +281,10 @@ class EvalTestResult:
     test_cases: List[EvalTestCase]
     generation_duration_seconds: Optional[float] = None
     ai_model_used: Optional[str] = None
+    graph_structure: Optional[Dict[str, Any]] = None  # For LangGraph: nodes, edges, entry_point
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d: Dict[str, Any] = {
             "tool_manifest": [t.to_dict() for t in self.tool_manifest],
             "test_cases": [tc.to_dict() for tc in self.test_cases],
             "meta": {
@@ -284,3 +292,6 @@ class EvalTestResult:
                 "ai_model_used": self.ai_model_used,
             },
         }
+        if self.graph_structure is not None:
+            d["graph_structure"] = self.graph_structure
+        return d
