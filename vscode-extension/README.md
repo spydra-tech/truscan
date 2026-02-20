@@ -187,7 +187,8 @@ The extension uses the same Semgrep rules as the CLI. Supported **languages** an
 **Generate Eval Tests fails**
 
 - Set `aiProvider` and `aiModel` in settings; set `aiApiKey` or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` in the environment.
-- Ensure the workspace has Python files that define MCP tools (e.g. `@mcp.tool()`). Check **Output** → “LLM Security Scanner” for API or timeout errors.
+- Ensure the workspace has Python files that define tools for the selected **Eval Framework** (e.g. FastMCP `@mcp.tool()`, LangChain `@tool`, LlamaIndex `FunctionTool.from_defaults`, LangGraph `StateGraph` + `ToolNode`). Check **Output** → “LLM Security Scanner” for API or timeout errors.
+- To run evals on the generated JSON, use the CLI: `python -m llm_scan.eval --eval-json <path> --graph <module:attribute>` (see main repo TEST_GENERATION.md).
 
 **Database upload fails**
 
@@ -222,5 +223,5 @@ Open the `vscode-extension` folder in VS Code, press F5 to launch Extension Deve
 
 ## More information
 
-- Scanner and rules: see the main repository [README](https://github.com/spydra-tech/truscan) and [TEST_GENERATION.md](https://github.com/spydra-tech/truscan/blob/main/TEST_GENERATION.md) for CLI and eval tests.
+- Scanner and rules: see the main repository [README](https://github.com/spydra-tech/truscan) and [TEST_GENERATION.md](https://github.com/spydra-tech/truscan/blob/main/TEST_GENERATION.md) for CLI, eval test generation, **eval types** (tool_selection, safety, prompt_injection, etc.), and **running concrete evals** (`python -m llm_scan.eval`).
 - Backend/dashboard: see the main repo’s `backend/` documentation for server setup.
